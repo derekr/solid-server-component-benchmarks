@@ -27,7 +27,7 @@ Everything uses published packages: `solid-js` and `@solidjs/web` 2.0.0-rc.17, `
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
-| `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4: the whole table rendered once per tick and pushed to every client as an SSE patch, morphed by id. This is a hand-written port in Datastar's style, not one of Datastar's own demos. | 3021 |
+| `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4, rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. Two styles: the whole table every tick (port 3021), or only the changed rows (`PATCH=rows`, port 3022). A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3021, 3022 |
 
 Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
@@ -36,7 +36,7 @@ Notes on fairness:
 
 ## Rerunning the article's numbers
 
-`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-22, on rc.17, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction, which is the point of publishing both.
+`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-22, on rc.17, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against two styles of the Datastar port, which the article's first draft did not.
 
 ### Bundle size: the fixed cost
 
@@ -107,14 +107,18 @@ cd runners && node dbmon-client.mjs 400 0.1 5 4 3
 cd runners && node dbmon-client.mjs 1000 0.1 5 4 3
 ```
 
+The Datastar port runs in two styles: the whole table re-sent every tick and morphed (`dbmon-hypermedia`), and only the changed rows, each morphed by its id (`dbmon-hypermedia-rows`, the same server with `PATCH=rows`). The changed-rows server finds what changed by comparing each tick's rows to the last; the Solid component just renders the table.
+
 10% of rows change per tick, 5 ticks/s, 4x CPU, one browser tab, 3 rounds (ranges):
 
-| | Solid | Datastar port |
-| --- | --- | --- |
-| 400 rows, client busy | article 508–615, rerun 445–466 ms/s | article 584–830, rerun 597–622 ms/s |
-| 400 rows, wire (brotli) | 5.2–5.4 kB/s | 6.4–6.6 kB/s |
-| 400 rows, server CPU | 27–28 ms/s | 17–18 ms/s |
-| 1,000 rows | renders and keeps updating (784–898 ms/s busy) | table never shown within 15 s (3 of 3 runs; article 6 of 6) |
+| | Solid (`broadcast()`) | Datastar, whole table | Datastar, changed rows |
+| --- | ---: | ---: | ---: |
+| 400 rows, client busy | 469–542 ms/s | 769–811 ms/s | 587–619 ms/s |
+| 400 rows, wire (brotli) | 5.2–5.3 kB/s | 6.5–7.0 kB/s | 5.0–5.1 kB/s |
+| 1,000 rows, ticks applied (of 5/s) | 5.1–5.3 | froze after 28–35 s (3 of 3) | 3.8–4.6 |
+| 1,000 rows, client busy | 965–988 ms/s | (frozen) | 962–998 ms/s |
+
+Both pages are server-rendered, so the table shows at once. "Froze" means the page stopped answering for 5 s or more: patches arrived faster than it could morph them.
 
 ### Live table, many viewers
 
@@ -124,15 +128,15 @@ cd runners && node dbmon-viewers.mjs 1,10,25,50,100 3
 
 Server CPU ms/s, 400 rows, 10% change, 5 ticks/s; viewers are HTTP readers that keep the stream compressed:
 
-| Viewers | Solid (`broadcast()`) | Datastar port |
-| ---: | ---: | ---: |
-| 1 | 28–34 | 18 |
-| 10 | 46–50 | 65–67 |
-| 25 | 71–76 | 131–142 |
-| 50 | 114–117 | 365–398 |
-| 100 | 190–211 | 1,034–1,242 |
+| Viewers | Solid (`broadcast()`) | Datastar, whole table | Datastar, changed rows |
+| ---: | ---: | ---: | ---: |
+| 1 | 29–35 | 21–22 | 7–12 |
+| 10 | 53–54 | 73–81 | 31 |
+| 25 | 83–85 | 147–159 | 56–58 |
+| 50 | 125–134 | 320–376 | 95–101 |
+| 100 | 201–217 | 1,069–1,286 | 182–196 |
 
-The Datastar port is cheaper with one viewer; from 10 viewers up, Solid is. The article quotes the 10-21 run (100 viewers: under 300 vs about 1,400 ms/s).
+Every server compresses each connection separately. What differs is how much each compresses per tick: Solid sends row operations and the changed-rows port sends changed rows (both small), while the whole-table port sends the whole table to every viewer.
 
 ## How to read the numbers
 

@@ -7,8 +7,9 @@
 //   rows: table rows (each cluster is a primary and a replica row)
 //
 // "applied/s" counts MutationObserver batches, which is approximately ticks
-// applied. A page that does not show the table within 15 s is reported as
-// "never usable".
+// applied. Both pages are server-rendered, so the table shows at once; a page
+// whose main thread then stops answering for 5 s or more (patches arriving
+// faster than it can apply them) is reported as "froze", with when.
 import { chromium } from "playwright";
 import { start, stop, url, cpuMs } from "./apps.mjs";
 
@@ -26,13 +27,20 @@ async function once(name) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: +rate });
     let wire = 0;
     cdp.on("Network.dataReceived", e => (wire += e.encodedDataLength));
-    await page.goto(url(name) + "/", { waitUntil: "load" });
-    try {
-      await page.waitForSelector("td.dbname", { timeout: 15000 });
-    } catch {
-      return { ...out, neverUsable: true };
+    const tLoad = Date.now();
+    await page.goto(url(name) + "/", { waitUntil: "commit" });
+    // Ask the page a trivial question; a frozen main thread never answers.
+    const ping = ms =>
+      Promise.race([page.evaluate(() => document.querySelectorAll("td.dbname").length), new Promise(r => setTimeout(() => r(-1), ms))]);
+    const froze = () => ({ ...out, froze: true, frozeAfterSec: +((Date.now() - tLoad) / 1000).toFixed(1) });
+    for (let rows = 0; rows <= 0; ) {
+      if (Date.now() - tLoad > 15000) return { ...out, noTable: true };
+      rows = await ping(5000);
+      if (rows === -1) return froze();
+      if (!rows) await page.waitForTimeout(200);
     }
     await page.waitForTimeout(1500);
+    if ((await ping(5000)) === -1) return froze();
     await page.evaluate(() => {
       window.__t = 0;
       new MutationObserver(() => window.__t++).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
@@ -40,7 +48,10 @@ async function once(name) {
     await cdp.send("Performance.enable");
     const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(m => [m.name, m.value]));
     const m0 = await metrics(), c0 = cpuMs(server.pid), w0 = wire, t0 = Date.now();
-    await page.waitForTimeout(+secs * 1000);
+    for (let i = 0; i < +secs; i++) {
+      await page.waitForTimeout(1000);
+      if ((await ping(5000)) === -1) return froze();
+    }
     const m1 = await metrics(), c1 = cpuMs(server.pid), dt = (Date.now() - t0) / 1000;
     const ticks = await page.evaluate(() => window.__t);
     return {
@@ -56,6 +67,6 @@ async function once(name) {
   }
 }
 
-const names = ["dbmon-solid", "dbmon-hypermedia"];
+const names = ["dbmon-solid", "dbmon-hypermedia", "dbmon-hypermedia-rows"];
 for (let r = 1; r <= +rounds; r++)
   for (const n of names) console.log(JSON.stringify({ round: r, ...(await once(n)) }));

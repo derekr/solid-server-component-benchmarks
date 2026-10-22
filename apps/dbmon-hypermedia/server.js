@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { watchDatabases, currentDatabases } from "./databases.js";
 
 const PORT = Number(process.env.PORT || 3021);
+const ROWS_ONLY = process.env.PATCH === "rows";
 const dir = new URL(".", import.meta.url).pathname;
 const css = readFileSync(dir + "app.css", "utf8");
 const datastarJs = readFileSync(dir + "datastar.js");
@@ -15,14 +16,16 @@ const esc = s =>
   String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 // Same markup as examples/server-dbmon/src/routes/dashboard.tsx, plus id="dbmon".
-function renderTable(dbs) {
-  let h = '<table id="dbmon" class="table table-striped latest-data"><tbody>';
-  for (const db of dbs) {
-    h += `<tr><td class="dbname">${esc(db.name)}</td><td class="query-count"><span class="${db.countClass}">${db.count}</span></td>`;
+function renderRow(db) {
+  let h = `<tr id="db${db.id}"><td class="dbname">${esc(db.name)}</td><td class="query-count"><span class="${db.countClass}">${db.count}</span></td>`;
     for (const q of db.top5)
       h += `<td class="Query ${q.className}">${esc(q.formatted)}<div class="popover left"><div class="popover-content">${esc(q.text)}</div><div class="arrow"></div></div></td>`;
-    h += "</tr>";
-  }
+  return h + "</tr>";
+}
+
+function renderTable(dbs) {
+  let h = '<table id="dbmon" class="table table-striped latest-data"><tbody>';
+  for (const db of dbs) h += renderRow(db);
   return h + "</tbody></table>";
 }
 
@@ -42,9 +45,16 @@ function startLoop() {
   loop = ac;
   console.log('simulation: start');
   (async () => {
+    let prev;
     for await (const dbs of watchDatabases(ac.signal)) {
-      latest = Buffer.from(patchEvent(renderTable(dbs)));
-      for (const send of clients) send(latest);
+      // PATCH=rows: send only the rows whose sample changed, each morphed by
+      // its id; new clients get the whole table on connect.
+      const event = ROWS_ONLY && prev
+        ? Buffer.from(patchEvent(dbs.filter((db, i) => db !== prev[i]).map(renderRow).join("")))
+        : Buffer.from(patchEvent(renderTable(dbs)));
+      prev = dbs;
+      latest = ROWS_ONLY ? null : event;
+      for (const send of clients) send(event);
     }
   })();
 }
@@ -53,7 +63,7 @@ function subscribe(send) {
   clients.add(send);
   console.log('clients:', clients.size);
   if (!loop) startLoop();
-  else if (latest) send(latest);
+  else send(latest ?? Buffer.from(patchEvent(renderTable(currentDatabases()))));
   return () => {
     clients.delete(send);
     if (!clients.size && loop) {

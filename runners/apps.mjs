@@ -18,7 +18,10 @@ export const APPS = {
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
   "dbmon-solid": { port: 3020, stream: "/_server/live/getDatabases-9c9967e7" },
-  "dbmon-hypermedia": { port: 3021, stream: "/updates" }
+  // The Datastar port in its two styles: the whole table re-sent and morphed
+  // every tick, or only the changed rows, each morphed by id (PATCH=rows).
+  "dbmon-hypermedia": { port: 3021, stream: "/updates" },
+  "dbmon-hypermedia-rows": { dir: "dbmon-hypermedia", port: 3022, stream: "/updates", env: { PATCH: "rows" } }
 };
 
 export const url = name => `http://localhost:${APPS[name].port}`;
@@ -27,7 +30,7 @@ export async function start(name, env = {}) {
   const app = APPS[name];
   if (!app) throw new Error(`unknown app ${name}`);
   const child = spawn("node", ["server.js"], {
-    cwd: root + name,
+    cwd: root + (app.dir ?? name),
     env: { ...process.env, ...app.env, ...env, PORT: String(app.port) },
     stdio: "ignore"
   });
