@@ -70,10 +70,13 @@ Lighthouse 12 mobile preset, 15 interleaved rounds, medians, `hn-sc-toggles` vs 
 ### Hacker News thread with `<details>` (no client components)
 
 ```sh
+cd runners && node lighthouse.mjs hn-details 15
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa
 ```
 
-Main-thread script time on a cold load at 4x CPU, median (min-max): article SC 126–174 ms vs SPA 350–590 ms; rerun SC 103 (96–137) vs SPA 246 (222–283) ms. With 652 client toggles (`hn-sc-toggles,hn-spa-toggles`) the SC page does more script than the SPA (rerun 325 vs 258 ms) but defers it out of the blocking window, which is why its TBT is lower above.
+Lighthouse (rerun only; the article quotes script time for this page): SC 97 vs SPA 91, TBT 0 vs 160 ms, 241 vs 338 kB transferred.
+
+Main-thread script time on a cold load at 4x CPU, from a real trace, median (min-max): article SC 126–174 ms vs SPA 350–590 ms; rerun SC 103 (96–137) vs SPA 246 (222–283) ms. Lighthouse's own main-thread breakdown agrees (script evaluation 103 vs 233 ms). With 652 client toggles (`hn-sc-toggles,hn-spa-toggles`) the SC page runs more script than the SPA (325 vs 258 ms), yet its TBT is still lower (see below for why).
 
 ### Client navigation to the thread
 
@@ -135,6 +138,7 @@ The Datastar port is cheaper with one viewer; from 10 viewers up, Solid is. The 
 
 - Lighthouse runs vary 15–20% from run to run on the same machine. A tie needs 15 or more interleaved rounds before you can call it; one run is an anecdote. The Lighthouse runner interleaves the apps within each round so a slow stretch of the machine hits all of them.
 - Lighthouse and INP judge first load and main-thread blocking. They don't see network waits after an interaction, which is where server-driven approaches pay.
+- Script time and TBT are different measurements. Script time is all JavaScript in a real trace slowed to 4x. TBT counts only the part of each task beyond 50 ms, between first paint and interactive, and Lighthouse simulates it from an unthrottled trace. On the HN thread the biggest task is about 700 ms of layout for 1,500 comments, on both sides. Lighthouse's simulated first paint lands after that task, so its TBT sees only the hydration tasks that follow. The SPA hydrates in 100–150 ms tasks; the SC page has none over 50 ms. A real trace where first paint is the shell (`script-time.mjs` with blocking time added) counts the layout task too, and both sides go to 650–950 ms, SC still lower (`<details>` 724 vs 930, toggles 656 vs 868).
 - Brotli erases most cleverness on the wire. Sending only the changed rows compresses to about the same size as re-sending the table.
 
 ## License
