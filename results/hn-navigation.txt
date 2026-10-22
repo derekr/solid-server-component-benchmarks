@@ -1,0 +1,5 @@
+client navigation to the story, cpu 1x, 5 runs, medians
+hn-sc            data 191.2 kB + lazy code 3.2 kB, on screen 226 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-CraeYKYy.js
+hn-spa           data 199 kB + lazy code 0 kB, on screen 250 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
+hn-sc-toggles    data 248 kB + lazy code 4.5 kB, on screen 437 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-CdvmIJGz.js /assets/regions-PULRT_li.js
+hn-spa-toggles   data 199 kB + lazy code 0 kB, on screen 251 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D

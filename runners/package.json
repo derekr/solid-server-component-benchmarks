@@ -1,0 +1,10 @@
+{
+  "name": "runners",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lighthouse": "12.8.2",
+    "playwright": "1.56.1",
+    "puppeteer-core": "25.15.0"
+  }
+}

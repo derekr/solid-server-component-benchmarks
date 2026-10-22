@@ -1,0 +1,24 @@
+{
+  "name": "store-sc",
+  "description": "Solid Server Components on a typical e-commerce store: the same app as ../store-spa, same routes, markup and data, with the static markup returned by server components and only the cart, quick add and buy box hydrating",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Ryan Carniato",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solidjs/router": "2.0.0-next.41",
+    "@solidjs/web": "2.0.0-rc.17",
+    "solid-js": "2.0.0-rc.17"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.51",
+    "vite": "8.3.5"
+  }
+}

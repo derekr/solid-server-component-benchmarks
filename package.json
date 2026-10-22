@@ -1,0 +1,10 @@
+{
+  "name": "solid-server-components-benchmarks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --filter './apps/*' build",
+    "sizes": "pnpm --filter sizes measure"
+  },
+  "packageManager": "pnpm@10.18.0"
+}

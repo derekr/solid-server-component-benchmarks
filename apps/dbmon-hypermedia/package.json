@@ -1,0 +1,11 @@
+{
+  "name": "dbmon-hypermedia",
+  "description": "The DBMon table on Datastar: the whole table rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. A hand-written port in Datastar's style, not one of Datastar's own demos.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo nothing to build",
+    "start": "node server.js"
+  }
+}

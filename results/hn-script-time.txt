@@ -1,0 +1,6 @@
+cpu 4x cold, 7 runs, median (min-max) ms
+hn-sc            script 103 (96-137), parseHTML 55 (52-62), compile 2 (2-3), style 89 (73-97), layout 628 (604-655), paint 11 (9-15), gc 24 (23-42), taskTotal 1053 (1006-1119)
+hn-spa           script 246 (222-283), parseHTML 86 (80-89), compile 28 (26-30), style 105 (93-120), layout 625 (601-674), paint 18 (15-20), gc 25 (21-34), taskTotal 1301 (1201-1401)
+cpu 4x cold, 7 runs, median (min-max) ms
+hn-sc-toggles    script 325 (302-389), parseHTML 51 (49-54), compile 17 (16-20), style 61 (58-69), layout 600 (591-623), paint 10 (9-11), gc 19 (16-45), taskTotal 1200 (1169-1280)
+hn-spa-toggles   script 258 (241-262), parseHTML 72 (68-97), compile 28 (26-35), style 70 (66-78), layout 614 (592-641), paint 18 (15-20), gc 23 (19-28), taskTotal 1210 (1158-1267)

@@ -1,0 +1,24 @@
+{
+  "name": "hn-sc-toggles",
+  "description": "Solid Server Components over frame streams: the same HN app as ../hackernews-spa — same routes, same markup, same data layer — with the static markup returned by server components, so it arrives as HTML once and never again as hydration data",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Ryan Carniato",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solidjs/router": "2.0.0-next.41",
+    "@solidjs/web": "2.0.0-rc.17",
+    "solid-js": "2.0.0-rc.17"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.51",
+    "vite": "8.3.5"
+  }
+}
