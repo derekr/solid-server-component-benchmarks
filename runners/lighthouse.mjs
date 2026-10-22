@@ -3,7 +3,7 @@
 // runs once per round, so slow stretches of the machine hit all of them.
 //
 // usage: node lighthouse.mjs <set> [rounds=15] [outDir=results/<set>]
-//   sets: hn (story page, toggles), hn-details (story page, <details>), store (listing + product)
+//   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC), hn-details (story page, <details>), store (listing + product)
 //
 // Prints one JSON line per run and a median table at the end; the raw
 // Lighthouse reports land in outDir.
@@ -15,7 +15,7 @@ import { start, stop, url } from "./apps.mjs";
 
 const SETS = {
   hn: {
-    apps: ["hn-sc-toggles", "hn-spa-toggles"],
+    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc"],
     pages: { story: "/stories/30186326" }
   },
   "hn-details": {

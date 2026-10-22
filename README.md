@@ -14,7 +14,7 @@ pnpm build                      # builds all apps in apps/
 npx playwright install chromium # or set CHROME_PATH to an existing Chromium
 ```
 
-Everything uses published packages: `solid-js` and `@solidjs/web` 2.0.0-rc.17, `@solidjs/router` 2.0.0-next.41, `@solidjs/vite-plugin` 3.0.0-next.51, Vite 8.3.5. Server components are a preview in these versions.
+Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Next app; `solid-js` and `@solidjs/web` 2.0.0-rc.17, `@solidjs/router` 2.0.0-next.41, `@solidjs/vite-plugin` 3.0.0-next.51, Vite 8.3.5. Server components are a preview in these versions.
 
 ## The apps
 
@@ -24,6 +24,7 @@ Everything uses published packages: `solid-js` and `@solidjs/web` 2.0.0-rc.17, `
 | `apps/hn-spa` | The same app as a server-rendered, hydrating SPA. | 3005 |
 | `apps/hn-sc-toggles` | `hn-sc` with a client `Toggle` component in a slot on every comment that has replies (652 on the test story). | 3006 |
 | `apps/hn-spa-toggles` | `hn-spa` with the same toggle as a client signal per comment. | 3007 |
+| `apps/hn-next-rsc` | The toggles app on Next.js 16 with React Server Components (`Toggle` is a `"use client"` component), from Ryan's 2024 [next-rsc-hackernews](https://github.com/ryansolid/next-rsc-hackernews). | 3008 |
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
@@ -59,13 +60,16 @@ The same small app (a signal, a memo, `Show`, `For`, `Loading`, `Errored`, a laz
 cd runners && node lighthouse.mjs hn 15
 ```
 
-Lighthouse 12 mobile preset, 15 interleaved rounds, medians, `hn-sc-toggles` vs `hn-spa-toggles`:
+Lighthouse 12 mobile preset, 15 interleaved rounds, medians. The rerun includes `hn-next-rsc`, the same app on Next.js 16 with React Server Components and the same client toggle (see its README for what was changed to measure it like for like):
 
-| | Article SC / SPA | Rerun SC / SPA |
+| | Article SC / SPA | Rerun SC / SPA / Next RSC |
 | --- | --- | --- |
-| Score | 91 / 79 | 96 / 92 |
-| Total Blocking Time | 212 / 568 ms | 18 / 141 ms |
-| Transferred | 267 / 342 kB | 263 / 340 kB |
+| Score | 91 / 79 | 96 / 91 / 78 |
+| Total Blocking Time | 212 / 568 ms | 24 / 168 / 357 ms |
+| LCP | | 2.25 / 2.56 / 3.76 s |
+| Transferred | 267 / 342 kB | 263 / 340 / 470 kB |
+| HTML document | | 212 / 300 / 303 kB |
+| JavaScript | | 47 / 38 / 131 kB |
 
 ### Hacker News thread with `<details>` (no client components)
 
