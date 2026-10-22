@@ -34,10 +34,11 @@ function encoder(req, res) {
   let stream;
   if (/\bbr\b/.test(accepts)) {
     res.setHeader("Content-Encoding", "br");
-    // Common streaming settings: quality 5 with a 16 MB window, so a long-
-    // lived stream keeps finding what it already sent.
+    // Quality 4 with a 4 MB window by default, a common streaming setting;
+    // DBMON_BROTLI="quality,window" overrides (both stacks read it).
+    const [quality, window] = (process.env.DBMON_BROTLI || "4,22").split(",").map(Number);
     stream = createBrotliCompress({
-      params: { [constants.BROTLI_PARAM_QUALITY]: 5, [constants.BROTLI_PARAM_LGWIN]: 24 }
+      params: { [constants.BROTLI_PARAM_QUALITY]: quality, [constants.BROTLI_PARAM_LGWIN]: window }
     });
   } else if (/\bgzip\b/.test(accepts)) {
     res.setHeader("Content-Encoding", "gzip");

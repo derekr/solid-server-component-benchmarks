@@ -11,7 +11,7 @@
 // whose main thread then stops answering for 5 s or more (patches arriving
 // faster than it can apply them) is reported as "froze", with when.
 import { chromium } from "playwright";
-import { start, stop, url, cpuMs } from "./apps.mjs";
+import { start, stop, page as pageUrl, cpuMs } from "./apps.mjs";
 
 const [rows = "400", change = "0.1", tps = "5", rate = "4", rounds = "3", secs = "10"] = process.argv.slice(2);
 const env = { DBMON_ROWS: String(+rows / 2), DBMON_MUTATIONS: change, DBMON_FPS: tps };
@@ -28,7 +28,7 @@ async function once(name) {
     let wire = 0;
     cdp.on("Network.dataReceived", e => (wire += e.encodedDataLength));
     const tLoad = Date.now();
-    await page.goto(url(name) + "/", { waitUntil: "commit" });
+    await page.goto(pageUrl(name), { waitUntil: "commit" });
     // Ask the page a trivial question; a frozen main thread never answers.
     const ping = ms =>
       Promise.race([page.evaluate(() => document.querySelectorAll("td.dbname").length), new Promise(r => setTimeout(() => r(-1), ms))]);
@@ -68,6 +68,6 @@ async function once(name) {
 }
 
 // APPS=a,b limits the run to those apps.
-const names = process.env.APPS ? process.env.APPS.split(",") : ["dbmon-solid", "dbmon-hypermedia", "dbmon-hypermedia-rows"];
+const names = process.env.APPS ? process.env.APPS.split(",") : ["dbmon-solid", "dbmon-spa", "dbmon-hypermedia", "dbmon-hypermedia-rows"];
 for (let r = 1; r <= +rounds; r++)
   for (const n of names) console.log(JSON.stringify({ round: r, ...(await once(n)) }));

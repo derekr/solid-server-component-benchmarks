@@ -6,6 +6,11 @@ import zlib from "node:zlib";
 import { readFileSync } from "node:fs";
 import { watchDatabases, currentDatabases } from "./databases.js";
 
+// Brotli settings for the update stream, "quality,window" (default 4,22, a
+// common streaming setting; 5,24 gives a 16 MB window, so each connection
+// finds the table it sent last tick, at several times the CPU).
+const [BROTLI_QUALITY, BROTLI_LGWIN] = (process.env.DBMON_BROTLI || "4,22").split(",").map(Number);
+
 const PORT = Number(process.env.PORT || 3021);
 const ROWS_ONLY = process.env.PATCH === "rows";
 const dir = new URL(".", import.meta.url).pathname;
@@ -117,8 +122,8 @@ const server = http.createServer((req, res) => {
       out = zlib.createBrotliCompress({
         params: {
           [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,
-          [zlib.constants.BROTLI_PARAM_QUALITY]: 5,
-          [zlib.constants.BROTLI_PARAM_LGWIN]: 24
+          [zlib.constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY,
+          [zlib.constants.BROTLI_PARAM_LGWIN]: BROTLI_LGWIN
         }
       });
       out.pipe(res);

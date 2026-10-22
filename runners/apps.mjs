@@ -22,10 +22,16 @@ export const APPS = {
   // The Datastar port in its two styles: the whole table re-sent and morphed
   // every tick, or only the changed rows, each morphed by id (PATCH=rows).
   "dbmon-hypermedia": { port: 3021, stream: "/updates" },
-  "dbmon-hypermedia-rows": { dir: "dbmon-hypermedia", port: 3022, stream: "/updates", env: { PATCH: "rows" } }
+  "dbmon-hypermedia-rows": { dir: "dbmon-hypermedia", port: 3022, stream: "/updates", env: { PATCH: "rows" } },
+  // The Solid app rendered in the browser from streamed JSON: rows swapped
+  // per object (`/spa`) or reconciled into a store by id (`/spa-store`).
+  "dbmon-spa": { dir: "dbmon-solid", port: 3023, path: "/spa", stream: "/_server/live/getDatabaseData-84a14cde" },
+  "dbmon-spa-store": { dir: "dbmon-solid", port: 3024, path: "/spa-store", stream: "/_server/live/getDatabaseData-cc45404a" },
 };
 
 export const url = name => `http://localhost:${APPS[name].port}`;
+// The page an app is measured on.
+export const page = name => url(name) + (APPS[name].path ?? "/");
 
 export async function start(name, env = {}) {
   const app = APPS[name];

@@ -11,7 +11,8 @@ node navigation.mjs 5 > $OUT/hn-navigation.txt
 node lighthouse.mjs hn 15 $OUT/lighthouse-hn > $OUT/lighthouse-hn.txt
 node lighthouse.mjs hn-details 15 $OUT/lighthouse-hn-details > $OUT/lighthouse-hn-details.txt
 node lighthouse.mjs store 15 $OUT/lighthouse-store > $OUT/lighthouse-store.txt
-node dbmon-client.mjs 400 0.1 5 4 3 > $OUT/dbmon-client.jsonl
-node dbmon-client.mjs 1000 0.1 5 4 3 >> $OUT/dbmon-client.jsonl
+node dbmon-client.mjs 400 0.1 5 4 15 > $OUT/dbmon-client.jsonl
+for r in 600 800 1000 1500 2000; do node dbmon-client.mjs $r 0.1 5 4 3; done > $OUT/dbmon-client-sweep.jsonl
+(node dbmon-drain.mjs dbmon-solid 2000; node dbmon-drain.mjs dbmon-spa 2000) > $OUT/dbmon-drain.txt
 node dbmon-viewers.mjs 1,10,25,50,100 3 > $OUT/dbmon-viewers.jsonl
 echo done

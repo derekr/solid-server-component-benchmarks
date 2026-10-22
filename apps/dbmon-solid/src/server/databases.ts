@@ -119,3 +119,30 @@ export async function* watchDatabases(signal?: AbortSignal): AsyncGenerator<Data
     stop();
   }
 }
+
+/** A row as the client-rendered dashboards show it: no raw `elapsed`. */
+export interface Row {
+  id: number;
+  name: string;
+  count: number;
+  countClass: string;
+  top5: { formatted: string; className: string; text: string }[];
+}
+
+// Cached per row object, so a row that didn't change keeps its identity and
+// the wire sends it as a reference.
+const rows = new WeakMap<Database, Row>();
+function rowOf(db: Database): Row {
+  let row = rows.get(db);
+  if (!row) {
+    const { id, name, count, countClass, top5 } = db;
+    row = { id, name, count, countClass, top5: top5.map(({ formatted, className, text }) => ({ formatted, className, text })) };
+    rows.set(db, row);
+  }
+  return row;
+}
+
+/** `watchDatabases`, carrying only what a client renders. */
+export async function* watchRows(signal?: AbortSignal): AsyncGenerator<Row[]> {
+  for await (const databases of watchDatabases(signal)) yield databases.map(rowOf);
+}

@@ -28,16 +28,17 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
+| `apps/dbmon-solid` at `/spa` | The same table rendered in the browser as an SPA: the server streams the rows as data through a `broadcast()` data source and a keyed `For` swaps each changed row (`/spa-store` reconciles into a store instead). | 3023, 3024 |
 | `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4, rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. Two styles: the whole table every tick (port 3021), or only the changed rows (`PATCH=rows`, port 3022). A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3021, 3022 |
 
 Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
-- **Same simulation.** Both DBMon apps run the same `databases` module (rows, change rate and tick rate set by `DBMON_ROWS`, `DBMON_MUTATIONS`, `DBMON_FPS`), and both compress per connection with brotli quality 5.
+- **Same simulation.** Both DBMon apps run the same `databases` module (rows, change rate and tick rate set by `DBMON_ROWS`, `DBMON_MUTATIONS`, `DBMON_FPS`), and both compress each connection with brotli quality 4 and a 4 MB window, a common streaming setting (`DBMON_BROTLI=quality,window` overrides it for both).
 - **Same language.** Both DBMon servers are Node. A Go or Rust server would cut the hypermedia stack's server cost; it would not change the client side.
 
 ## Rerunning the article's numbers
 
-`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-22, on rc.17, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against two styles of the Datastar port, which the article's first draft did not.
+`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-22, on rc.17, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against an SPA and two styles of the Datastar port, which the article's first draft did not. They were measured on Solid's `next` branch at f5ad0650, which shares a `broadcast()` data source across viewers (solidjs/solid#4230); rc.17 does not, so on rc.17 the SPA's server column comes out several times higher from 10 viewers up. Client runs use 4x CPU throttling, Lighthouse's mobile default.
 
 ### Bundle size: the fixed cost
 
@@ -107,42 +108,38 @@ A tie on speed; the SPA ships about 10 kB less JavaScript.
 ### Live table, one viewer
 
 ```sh
-cd runners && node dbmon-client.mjs 400 0.1 5 4 3
-cd runners && node dbmon-client.mjs 1000 0.1 5 4 3
+cd runners && node dbmon-client.mjs 400 0.1 5 4 15
 ```
 
-The Datastar port runs in two styles: the whole table re-sent every tick and morphed (`dbmon-hypermedia`), and only the changed rows, each morphed by its id (`dbmon-hypermedia-rows`, the same server with `PATCH=rows`). The changed-rows server finds what changed by comparing each tick's rows to the last; the Solid component just renders the table.
+The SPA is the same Solid app rendered in the browser from streamed rows (`dbmon-spa`). The Datastar port runs in two styles: the whole table re-sent every tick and morphed (`dbmon-hypermedia`), and only the changed rows, each morphed by its id (`dbmon-hypermedia-rows`, the same server with `PATCH=rows`). The changed-rows server finds what changed by comparing each tick's rows to the last; the Solid component just renders the table.
 
-10% of rows change per tick, 5 ticks/s, 4x CPU, one browser tab, 3 rounds (ranges):
+400 rows, 10% of rows change per tick, 5 ticks/s, one browser tab, 15 interleaved rounds. Every app applied every tick and none froze:
 
-| | Solid (`broadcast()`) | Datastar, whole table | Datastar, changed rows |
-| --- | ---: | ---: | ---: |
-| 400 rows, client busy | 469–542 ms/s | 769–811 ms/s | 587–619 ms/s |
-| 400 rows, wire (brotli) | 5.2–5.3 kB/s | 6.5–7.0 kB/s | 5.0–5.1 kB/s |
-| 1,000 rows, ticks applied (of 5/s) | 5.1–5.3 | froze after 28–35 s (3 of 3) | 3.8–4.6 |
-| 1,000 rows, client busy | 965–988 ms/s | (frozen) | 962–998 ms/s |
+| | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
+| --- | ---: | ---: | ---: | ---: |
+| Client busy, median (p25–p75) | 462 (446–517) ms/s | 562 (512–607) ms/s | 580 (571–631) ms/s | 822 (790–838) ms/s |
+| Wire (brotli) | 14.1 kB/s | 7.2 kB/s | 6.5 kB/s | 9.8 kB/s |
 
-Both pages are server-rendered, so the table shows at once. "Froze" means the page stopped answering for 5 s or more: patches arrived faster than it could morph them.
+All four pages are server-rendered, so the table shows at once. The SPA does the least client work; it also sends twice the bytes, as rows of data instead of row operations.
 
 ### Live table, how big before it falls behind
 
 ```sh
-cd runners && for r in 600 800 1500 2000; do node dbmon-client.mjs $r 0.1 5 4 3; done
-cd runners && node dbmon-drain.mjs dbmon-solid 2000
+cd runners && for r in 600 800 1000 1500 2000; do node dbmon-client.mjs $r 0.1 5 4 3; done
+cd runners && node dbmon-drain.mjs dbmon-solid 2000 && node dbmon-drain.mjs dbmon-spa 2000
 ```
 
-Ticks applied per second (of 5), one tab at 4x CPU, 10% change, 3 rounds:
+Ticks applied per second (of 5), one tab, 10% change, 3 rounds. "Froze" means the page stopped answering for 5 s or more: patches arrived faster than it could morph them.
 
-| Rows | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
-| ---: | ---: | ---: | ---: |
-| 400 | 5 | 4.9–5.1 | 5–5.1 |
-| 600 | 5 | 5 | 4.7–5 |
-| 800 | 5–5.1 | 4.6–4.7 | froze (3 of 3) |
-| 1,000 | 5.1–5.3 | 3.8–4.6 | froze (3 of 3) |
-| 1,500 | 5.1–5.2 | froze (3 of 3) | froze (3 of 3) |
-| 2,000 | 4.9–5.3 | froze (3 of 3) | froze (3 of 3) |
+| Rows | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
+| ---: | ---: | ---: | ---: | ---: |
+| 600 | 5–5.1 | 5 | 5 | froze (2 of 3), 4.3 |
+| 800 | 4.8–5 | 5–5.1 | 4.4–5 | froze (3 of 3) |
+| 1,000 | 5–5.2 | 5–5.2 | 3.6–4.1 | froze (3 of 3) |
+| 1,500 | 5.2–5.3 | 5.3 | froze (3 of 3) | froze (3 of 3) |
+| 2,000 | 5.2–5.3 | 5.4 | froze (3 of 3) | froze (3 of 3) |
 
-"Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. Solid drains in 0 s at 1,000 rows, 0.1 s at 1,500 and 0.8 s at 2,000: still keeping up, just. In every column the browser is the bottleneck, not the server (see below: the server CPU at 400 rows stays far under a core even at 100 viewers).
+At 1,000 rows the three that keep up are all near a full core: client busy SPA 894–943, Solid 952–988, changed rows 972–996 ms/s. "Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. At 2,000 rows the SPA drains in 0.2 s and Solid in 0.7 s: both still keeping up. In every column the browser is the bottleneck, not the server (below: at 400 rows no server comes near a core even at 100 viewers).
 
 ### Live table, many viewers
 
@@ -150,24 +147,25 @@ Ticks applied per second (of 5), one tab at 4x CPU, 10% change, 3 rounds:
 cd runners && node dbmon-viewers.mjs 1,10,25,50,100 3
 ```
 
-Server CPU ms/s, 400 rows (the single-tab table above), 10% change, 5 ticks/s; viewers are HTTP readers that keep the stream compressed:
+Server CPU ms/s, 400 rows, 10% change, 5 ticks/s, 3 rounds; viewers are HTTP readers that keep the stream compressed:
 
-| Viewers | Solid (`broadcast()`) | Datastar, whole table | Datastar, changed rows |
-| ---: | ---: | ---: | ---: |
-| 1 | 29–35 | 21–22 | 7–12 |
-| 10 | 53–54 | 73–81 | 31 |
-| 25 | 83–85 | 147–159 | 56–58 |
-| 50 | 125–134 | 320–376 | 95–101 |
-| 100 | 201–217 | 1,069–1,286 | 182–196 |
+| Viewers | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 26–30 | 28–30 | 10–12 | 19–20 |
+| 10 | 48–51 | 45–47 | 23–26 | 48–51 |
+| 25 | 80–85 | 62–66 | 41–44 | 90–98 |
+| 50 | 130–137 | 93–99 | 67–76 | 161–168 |
+| 100 | 226–237 | 148–167 | 120–126 | 309–321 |
+| Wire per viewer | 13.6–14.8 kB/s | 6.8–7.3 kB/s | 6.3–6.8 kB/s | 9.5–9.9 kB/s |
 
-Every server compresses each connection separately. What differs is how much each compresses per tick: Solid sends row operations and the changed-rows port sends changed rows (both small), while the whole-table port sends the whole table to every viewer.
+Every server does its tick's work once for all viewers and compresses each connection separately, so what grows with viewers is compression, and its order here follows how much each stream hands brotli before compressing: the changed rows, Solid's row operations, the SPA's rows as data, the whole table. For the SPA this was checked directly in an earlier batch at brotli quality 5 with a 16 MB window: with compression off, its server cost at 50 viewers fell from 430 to 50 ms/s. Compression settings move these numbers a lot: at that setting the whole-table port's server cost 4–5x more from 50 viewers up, and its wire was about a third smaller.
 
 ## How to read the numbers
 
 - Lighthouse runs vary 15–20% from run to run on the same machine. A tie needs 15 or more interleaved rounds before you can call it; one run is an anecdote. The Lighthouse runner interleaves the apps within each round so a slow stretch of the machine hits all of them.
 - Lighthouse and INP judge first load and main-thread blocking. They don't see network waits after an interaction, which is where server-driven approaches pay.
 - Script time and TBT are different measurements. Script time is all JavaScript in a real trace slowed to 4x. TBT counts only the part of each task beyond 50 ms, between first paint and interactive, and Lighthouse simulates it from an unthrottled trace. On the HN thread the biggest task is about 700 ms of layout for 1,500 comments, on both sides. Lighthouse's simulated first paint lands after that task, so its TBT sees only the hydration tasks that follow. The SPA hydrates in 100–150 ms tasks; the SC page has none over 50 ms. A real trace where first paint is the shell (`script-time.mjs` with blocking time added) counts the layout task too, and both sides go to 650–950 ms, SC still lower (`<details>` 724 vs 930, toggles 656 vs 868).
-- Brotli erases most cleverness on the wire. Sending only the changed rows compresses to about the same size as re-sending the table.
+- Brotli erases much of the cleverness on the wire: re-sending the whole table compresses to about 1.5x the size of sending only the changed rows.
 
 ## License
 

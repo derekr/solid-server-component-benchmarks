@@ -1,0 +1,4 @@
+## dbmon-solid
+{"app":"dbmon-solid","rows":2000,"drainSec":0.7,"batchesAfterStop":9}
+## dbmon-spa
+{"app":"dbmon-spa","rows":2000,"drainSec":0.2,"batchesAfterStop":3}

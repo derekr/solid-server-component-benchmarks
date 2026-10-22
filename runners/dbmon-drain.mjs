@@ -4,7 +4,7 @@
 //
 // usage: node dbmon-drain.mjs <app> <rows>
 import { chromium } from "playwright";
-import { start, stop, url } from "./apps.mjs";
+import { start, stop, page as pageUrl } from "./apps.mjs";
 const [name, rows] = process.argv.slice(2);
 const server = await start(name, { DBMON_ROWS: String(rows / 2), DBMON_MUTATIONS: "0.1", DBMON_FPS: "5" });
 const browser = await chromium.launch();
@@ -13,7 +13,7 @@ try {
   const page = await browser.newPage();
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
-  await page.goto(url(name) + "/", { waitUntil: "commit" });
+  await page.goto(pageUrl(name), { waitUntil: "commit" });
   await page.waitForSelector("td.dbname", { timeout: 15000 });
   await page.evaluate(() => { window.__m = []; new MutationObserver(() => window.__m.push(performance.now())).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true }); });
   await page.waitForTimeout(10000);
