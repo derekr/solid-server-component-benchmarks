@@ -124,13 +124,33 @@ The Datastar port runs in two styles: the whole table re-sent every tick and mor
 
 Both pages are server-rendered, so the table shows at once. "Froze" means the page stopped answering for 5 s or more: patches arrived faster than it could morph them.
 
+### Live table, how big before it falls behind
+
+```sh
+cd runners && for r in 600 800 1500 2000; do node dbmon-client.mjs $r 0.1 5 4 3; done
+cd runners && node dbmon-drain.mjs dbmon-solid 2000
+```
+
+Ticks applied per second (of 5), one tab at 4x CPU, 10% change, 3 rounds:
+
+| Rows | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
+| ---: | ---: | ---: | ---: |
+| 400 | 5 | 4.9–5.1 | 5–5.1 |
+| 600 | 5 | 5 | 4.7–5 |
+| 800 | 5–5.1 | 4.6–4.7 | froze (3 of 3) |
+| 1,000 | 5.1–5.3 | 3.8–4.6 | froze (3 of 3) |
+| 1,500 | 5.1–5.2 | froze (3 of 3) | froze (3 of 3) |
+| 2,000 | 4.9–5.3 | froze (3 of 3) | froze (3 of 3) |
+
+"Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. Solid drains in 0 s at 1,000 rows, 0.1 s at 1,500 and 0.8 s at 2,000: still keeping up, just. In every column the browser is the bottleneck, not the server (see below: the server CPU at 400 rows stays far under a core even at 100 viewers).
+
 ### Live table, many viewers
 
 ```sh
 cd runners && node dbmon-viewers.mjs 1,10,25,50,100 3
 ```
 
-Server CPU ms/s, 400 rows, 10% change, 5 ticks/s; viewers are HTTP readers that keep the stream compressed:
+Server CPU ms/s, 400 rows (the single-tab table above), 10% change, 5 ticks/s; viewers are HTTP readers that keep the stream compressed:
 
 | Viewers | Solid (`broadcast()`) | Datastar, whole table | Datastar, changed rows |
 | ---: | ---: | ---: | ---: |

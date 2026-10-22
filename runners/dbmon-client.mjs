@@ -67,6 +67,7 @@ async function once(name) {
   }
 }
 
-const names = ["dbmon-solid", "dbmon-hypermedia", "dbmon-hypermedia-rows"];
+// APPS=a,b limits the run to those apps.
+const names = process.env.APPS ? process.env.APPS.split(",") : ["dbmon-solid", "dbmon-hypermedia", "dbmon-hypermedia-rows"];
 for (let r = 1; r <= +rounds; r++)
   for (const n of names) console.log(JSON.stringify({ round: r, ...(await once(n)) }));
