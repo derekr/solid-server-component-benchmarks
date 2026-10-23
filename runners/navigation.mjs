@@ -1,10 +1,10 @@
 // Client navigation from the feed to the HN story: bytes fetched after the
-// click (compressed, as transferred; the data request and any lazily loaded
-// code chunks apart) and time until the thread is on screen.
+// click until the thread is on screen (compressed, as transferred; the data
+// request and any lazily loaded code chunks apart), and that time.
 // The server-component apps fetch a frame (markup + slot records); the SPAs
 // fetch JSON and render it on the client.
 //
-// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles] [cpuRate=1]
+// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik] [cpuRate=1]
 //
 // The feed page reads the live HN API; if that is unreachable the feed shows
 // its error state, but the app is still running and the story itself comes
@@ -13,7 +13,7 @@ import { chromium } from "playwright";
 import { start, stop, url } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 5);
-const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles").split(",");
+const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik").split(",");
 const RATE = Number(process.argv[4] || 1);
 const STORY = "/stories/30186326";
 
@@ -31,27 +31,43 @@ async function once(browser, base) {
   cdp.on("Network.requestWillBeSent", e => counting && (reqs[e.requestId] = { url: e.request.url, kb: 0 }));
   cdp.on("Network.loadingFinished", e => reqs[e.requestId] && (reqs[e.requestId].kb = e.encodedDataLength / 1000));
   counting = true;
-  const painted = await page.evaluate(async story => {
-    const a = document.createElement("a");
-    a.href = story;
-    document.body.appendChild(a);
-    const t0 = performance.now();
-    a.click();
-    await new Promise(res => {
-      (function poll() {
-        if (document.querySelectorAll(".comment").length > 1000) res();
-        else requestAnimationFrame(poll);
-      })();
-    });
-    return performance.now() - t0;
+  // A real mouse click (move, then press), as a user's: Qwik City's links
+  // route on the client only after the pointer has been over them. Timed
+  // from pointerdown. Qwik City routes only its own <Link>s, so its app
+  // carries an invisible one to the story; the Solid apps route any
+  // same-origin anchor, so one is added.
+  await page.evaluate(story => {
+    let a = document.querySelector("a[data-bench-story]");
+    if (!a) {
+      a = document.createElement("a");
+      a.href = story;
+      a.dataset.benchStory = "";
+      a.textContent = "story";
+      a.style.cssText = "position:fixed;right:0;bottom:0;opacity:0";
+      document.body.appendChild(a);
+    }
+    addEventListener("pointerdown", () => (window.__t0 = performance.now()), { capture: true, once: true });
   }, STORY);
+  await page.click("a[data-bench-story]");
+  const painted = await page.evaluate(
+    () =>
+      new Promise(res => {
+        (function poll() {
+          if (document.querySelectorAll(".comment").length > 1000) res(performance.now() - window.__t0);
+          else requestAnimationFrame(poll);
+        })();
+      })
+  );
+  // Only what the navigation itself fetched: requests issued after the thread
+  // is on screen (prefetches of links in it, for one) are not counted.
+  counting = false;
   await page.waitForTimeout(1500);
   await ctx.close();
   const list = Object.values(reqs);
   return {
     paintedMs: Math.round(painted),
-    dataKB: +list.filter(r => !/\/assets\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
-    codeKB: +list.filter(r => /\/assets\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
+    dataKB: +list.filter(r => !/\/(assets|build|_next\/static)\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
+    codeKB: +list.filter(r => /\/(assets|build|_next\/static)\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
     requests: list.map(r => r.url.replace(base, "").slice(0, 60))
   };
 }

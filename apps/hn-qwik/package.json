@@ -1,0 +1,21 @@
+{
+  "name": "hn-qwik",
+  "private": true,
+  "type": "module",
+  "description": "Hacker News on Qwik City 1.x (resumable, client routing)",
+  "scripts": {
+    "build": "vite build && vite build -c adapters/node-server/vite.config.ts",
+    "build.client": "vite build",
+    "build.server": "vite build -c adapters/node-server/vite.config.ts",
+    "build.types": "tsc --incremental --noEmit",
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "@builder.io/qwik": "1.20.2",
+    "@builder.io/qwik-city": "1.20.2",
+    "@types/node": "22.18.0",
+    "typescript": "5.9.3",
+    "vite": "5.4.21",
+    "vite-tsconfig-paths": "4.3.2"
+  }
+}

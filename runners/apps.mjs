@@ -16,6 +16,7 @@ export const APPS = {
   "hn-sc-toggles": { port: 3006, env: HN },
   "hn-spa-toggles": { port: 3007, env: HN },
   "hn-next-rsc": { port: 3008, env: HN },
+  "hn-qwik": { port: 3010, env: HN },
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
   "dbmon-solid": { port: 3020, stream: "/_server/live/getDatabases-9c9967e7" },

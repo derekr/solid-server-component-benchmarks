@@ -25,6 +25,7 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/hn-sc-toggles` | `hn-sc` with a client `Toggle` component in a slot on every comment that has replies (652 on the test story). | 3006 |
 | `apps/hn-spa-toggles` | `hn-spa` with the same toggle as a client signal per comment. | 3007 |
 | `apps/hn-next-rsc` | The toggles app on Next.js 16 with React Server Components (`Toggle` is a `"use client"` component), from Ryan's 2024 [next-rsc-hackernews](https://github.com/ryansolid/next-rsc-hackernews). | 3008 |
+| `apps/hn-qwik` | The toggles app on Qwik City 1.20 (resumable: no hydration, handlers load on first use), from Ryan's 2024 [qwik-hn-spa](https://github.com/ryansolid/qwik-hn-spa), with client routing and a `Toggle` component per comment. | 3010 |
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
@@ -61,16 +62,18 @@ The same small app (a signal, a memo, `Show`, `For`, `Loading`, `Errored`, a laz
 cd runners && node lighthouse.mjs hn 15
 ```
 
-Lighthouse 12 mobile preset, 15 interleaved rounds, medians. The rerun includes `hn-next-rsc`, the same app on Next.js 16 with React Server Components and the same client toggle (see its README for what was changed to measure it like for like):
+Lighthouse 12 mobile preset, 15 interleaved rounds, medians. The rerun includes `hn-next-rsc`, the same app on Next.js 16 with React Server Components and the same client toggle, and `hn-qwik`, the same app on Qwik City (see their READMEs for what was changed to measure them like for like). This set was rerun on Solid's `next` with the live table; SC and SPA came out the same as on rc.17:
 
-| | Article SC / SPA | Rerun SC / SPA / Next RSC |
+| | Article SC / SPA | Rerun SC / SPA / Next RSC / Qwik City |
 | --- | --- | --- |
-| Score | 91 / 79 | 96 / 91 / 78 |
-| Total Blocking Time | 212 / 568 ms | 24 / 168 / 357 ms |
-| LCP | | 2.25 / 2.56 / 3.76 s |
-| Transferred | 267 / 342 kB | 263 / 340 / 470 kB |
-| HTML document | | 212 / 300 / 303 kB |
-| JavaScript | | 47 / 38 / 131 kB |
+| Score | 91 / 79 | 96 / 91 / 79 / 82 |
+| Total Blocking Time | 212 / 568 ms | 17 / 150 / 338 / 24 ms |
+| LCP | | 2.25 / 2.55 / 3.77 / 3.61 s |
+| Transferred | 267 / 342 kB | 263 / 340 / 469 / 529 kB |
+| HTML document | | 212 / 300 / 303 / 481 kB |
+| JavaScript | | 47 / 38 / 131 / 43 kB |
+
+Qwik blocks the main thread least after ours: it resumes instead of hydrating. It paints later, and its document is more than twice ours (481 vs 212 kB): it carries the story twice, as HTML and as serialized state for resuming. Its JavaScript loads at idle (Qwik's preloader), not on interaction.
 
 ### Hacker News thread with `<details>` (no client components)
 
@@ -89,7 +92,15 @@ Main-thread script time on a cold load at 4x CPU, from a real trace, median (min
 cd runners && node navigation.mjs 5
 ```
 
-Data fetched on navigation, brotli: with no client slots SC 191 vs SPA 199 kB; with 652 toggles SC 248 vs SPA 199 kB (article: 248 vs 199). The SC side also lazy-loads 3–5 kB of code on its first navigation.
+Fetched from the click until the thread is on screen, brotli, 5 runs, medians, no CPU throttling:
+
+| | SC | SPA | SC, 652 toggles | SPA, 652 toggles | Qwik City |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Data | 191 kB | 199 kB | 248 kB | 199 kB | 222 kB |
+| Code loaded on first navigation | 3.2 kB | 0 | 4.5 kB | 0 | 1.2 kB |
+| On screen | 230 ms | 247 ms | 436 ms | 247 ms | 652 ms |
+
+The article quotes 248 vs 199 kB. The runner clicks with a real mouse: Qwik City routes its links on the client only once the pointer has been over them (a scripted `click()` reloads the page), and it routes only its own `<Link>`s, so `hn-qwik` carries an invisible one to the story. Qwik's data is the story through a `server$` call; the small `q-data.json` requests are its route prefetches. Next's navigation is not measured: it too routes only its own links, and the RSC app has none to the story.
 
 ### Storefront
 
