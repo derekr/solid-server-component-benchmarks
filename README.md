@@ -14,7 +14,7 @@ pnpm build                      # builds all apps in apps/
 npx playwright install chromium # or set CHROME_PATH to an existing Chromium
 ```
 
-Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Next app; `solid-js` and `@solidjs/web` 2.0.0-rc.17, `@solidjs/router` 2.0.0-next.41, `@solidjs/vite-plugin` 3.0.0-next.51, Vite 8.3.5. Server components are a preview in these versions.
+Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Next app; `solid-js` and `@solidjs/web` 2.0.0-rc.18, `@solidjs/router` 2.0.0-next.42, `@solidjs/vite-plugin` 3.0.0-next.51, Vite 8.3.5. Server components are a preview in these versions.
 
 ## The apps
 
@@ -39,7 +39,7 @@ Notes on fairness:
 
 ## Rerunning the article's numbers
 
-`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-22, on rc.17, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against an SPA and two styles of the Datastar port, which the article's first draft did not. They were measured on Solid's `next` branch at f5ad0650, which shares a `broadcast()` data source across viewers (solidjs/solid#4230); rc.17 does not, so on rc.17 the SPA's server column comes out several times higher from 10 viewers up. Client runs use 4x CPU throttling, Lighthouse's mobile default.
+`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-23, on rc.18, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against an SPA and two styles of the Datastar port, which the article's first draft did not. rc.18 shares a `broadcast()` data source across viewers (solidjs/solid#4230), which the SPA's server column depends on, and sends a live table's changed rows as in-place edits instead of row markup (solidjs/solid#4239). Client runs use 4x CPU throttling, Lighthouse's mobile default.
 
 ### Bundle size: the fixed cost
 
@@ -51,7 +51,7 @@ The same small app (a signal, a memo, `Show`, `For`, `Loading`, `Errored`, a laz
 
 | Built as | Article | Rerun |
 | --- | ---: | ---: |
-| Client-rendered SPA | 13.1 KB | 13.3 KB |
+| Client-rendered SPA | 13.1 KB | 13.4 KB |
 | Server-rendered, hydrating SPA | 18.2 KB | 18.4 KB |
 | Hydrating SPA calling server functions | 22.0 KB | 22.2 KB |
 | Server components page | 33.1 KB | 33.3 KB |
@@ -62,18 +62,18 @@ The same small app (a signal, a memo, `Show`, `For`, `Loading`, `Errored`, a laz
 cd runners && node lighthouse.mjs hn 15
 ```
 
-Lighthouse 12 mobile preset, 15 interleaved rounds, medians. The rerun includes `hn-next-rsc`, the same app on Next.js 16 with React Server Components and the same client toggle, and `hn-qwik`, the same app on Qwik City (see their READMEs for what was changed to measure them like for like). This set was rerun on Solid's `next` with the live table; SC and SPA came out the same as on rc.17:
+Lighthouse 12 mobile preset, 15 interleaved rounds, medians. The rerun includes `hn-next-rsc`, the same app on Next.js 16 with React Server Components and the same client toggle, and `hn-qwik`, the same app on Qwik City (see their READMEs for what was changed to measure them like for like).:
 
 | | Article SC / SPA | Rerun SC / SPA / Next RSC / Qwik City |
 | --- | --- | --- |
-| Score | 91 / 79 | 96 / 91 / 79 / 82 |
-| Total Blocking Time | 212 / 568 ms | 17 / 150 / 338 / 24 ms |
-| LCP | | 2.25 / 2.55 / 3.77 / 3.61 s |
+| Score | 91 / 79 | 96 / 91 / 78 / 82 |
+| Total Blocking Time | 212 / 568 ms | 19 / 168 / 355 / 36 ms |
+| LCP | | 2.25 / 2.56 / 3.77 / 3.61 s |
 | Transferred | 267 / 342 kB | 263 / 340 / 469 / 529 kB |
-| HTML document | | 212 / 300 / 303 / 481 kB |
+| HTML document | | 213 / 300 / 303 / 481 kB |
 | JavaScript | | 47 / 38 / 131 / 43 kB |
 
-Qwik blocks the main thread least after ours: it resumes instead of hydrating. It paints later, and its document is more than twice ours (481 vs 212 kB): it carries the story twice, as HTML and as serialized state for resuming. Its JavaScript loads at idle (Qwik's preloader), not on interaction.
+Qwik blocks the main thread least after ours: it resumes instead of hydrating. It paints later, and its document is more than twice ours (481 vs 213 kB): it carries the story twice, as HTML and as serialized state for resuming. Its JavaScript loads at idle (Qwik's preloader), not on interaction.
 
 ### Hacker News thread with `<details>` (no client components)
 
@@ -82,9 +82,9 @@ cd runners && node lighthouse.mjs hn-details 15
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa
 ```
 
-Lighthouse (rerun only; the article quotes script time for this page): SC 97 vs SPA 91, TBT 0 vs 160 ms, 241 vs 338 kB transferred.
+Lighthouse (rerun only; the article quotes script time for this page): SC 97 vs SPA 91, TBT 1 vs 156 ms, 241 vs 338 kB transferred.
 
-Main-thread script time on a cold load at 4x CPU, from a real trace, median (min-max): article SC 126–174 ms vs SPA 350–590 ms; rerun SC 103 (96–137) vs SPA 246 (222–283) ms. Lighthouse's own main-thread breakdown agrees (script evaluation 103 vs 233 ms). With 652 client toggles (`hn-sc-toggles,hn-spa-toggles`) the SC page runs more script than the SPA (325 vs 258 ms), yet its TBT is still lower (see below for why).
+Main-thread script time on a cold load at 4x CPU, from a real trace, median (min-max): article SC 126–174 ms vs SPA 350–590 ms; rerun SC 121 (115–130) vs SPA 263 (254–270) ms. Lighthouse's own main-thread breakdown agrees (script evaluation 113 vs 236 ms). With 652 client toggles (`hn-sc-toggles,hn-spa-toggles`) the SC page runs more script than the SPA (354 vs 273 ms), yet its TBT is still lower (see below for why).
 
 ### Client navigation to the thread
 
@@ -97,8 +97,8 @@ Fetched from the click until the thread is on screen, brotli, 5 runs, medians, n
 | | SC | SPA | SC, 652 toggles | SPA, 652 toggles | Qwik City |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Data | 191 kB | 199 kB | 248 kB | 199 kB | 222 kB |
-| Code loaded on first navigation | 3.2 kB | 0 | 4.5 kB | 0 | 1.2 kB |
-| On screen | 230 ms | 247 ms | 436 ms | 247 ms | 652 ms |
+| Code loaded on first navigation | 3.9 kB | 0 | 5.2 kB | 0 | 1.2 kB |
+| On screen | 241 ms | 261 ms | 476 ms | 258 ms | 666 ms |
 
 The article quotes 248 vs 199 kB. The runner clicks with a real mouse: Qwik City routes its links on the client only once the pointer has been over them (a scripted `click()` reloads the page), and it routes only its own `<Link>`s, so `hn-qwik` carries an invisible one to the story. Qwik's data is the story through a `server$` call; the small `q-data.json` requests are its route prefetches. Next's navigation is not measured: it too routes only its own links, and the RSC app has none to the story.
 
@@ -110,8 +110,8 @@ cd runners && node lighthouse.mjs store 15
 
 | Page | Article SC / SPA | Rerun SC / SPA |
 | --- | --- | --- |
-| Listing score, TBT | 100 / 99–100, 33 / 66 ms | 100 / 100, 3 / 41 ms |
-| Product score, TBT | 100 / 99–100, 6 / 10 ms | 100 / 100, 2 / 9 ms |
+| Listing score, TBT | 100 / 99–100, 33 / 66 ms | 100 / 100, 5 / 45 ms |
+| Product score, TBT | 100 / 99–100, 6 / 10 ms | 100 / 100, 5 / 13 ms |
 | JS transferred | 50.4 / 38.9 kB | 48.7 / 38.7 kB |
 
 A tie on speed; the SPA ships about 10 kB less JavaScript.
@@ -128,10 +128,10 @@ The SPA is the same Solid app rendered in the browser from streamed rows (`dbmon
 
 | | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
 | --- | ---: | ---: | ---: | ---: |
-| Client busy, median (p25–p75) | 462 (446–517) ms/s | 562 (512–607) ms/s | 580 (571–631) ms/s | 822 (790–838) ms/s |
-| Wire (brotli) | 14.1 kB/s | 7.2 kB/s | 6.5 kB/s | 9.8 kB/s |
+| Client busy, median (p25–p75) | 444 (428–472) ms/s | 427 (399–472) ms/s | 529 (512–555) ms/s | 761 (725–782) ms/s |
+| Wire (brotli) | 14.3 kB/s | 7.3 kB/s | 6.5 kB/s | 9.7 kB/s |
 
-All four pages are server-rendered, so the table shows at once. The SPA does the least client work; it also sends twice the bytes, as rows of data instead of row operations.
+All four pages are server-rendered, so the table shows at once. The SPA and Solid tie on client work (their middle halves overlap); the SPA sends twice the bytes, as rows of data instead of row edits.
 
 ### Live table, how big before it falls behind
 
@@ -144,12 +144,12 @@ Ticks applied per second (of 5), one tab, 10% change, 3 rounds (400 rows is the 
 
 | Rows | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
 | ---: | ---: | ---: | ---: | ---: |
-| 400 | 4.9–5 | 4.9–5.1 | 4.9–5.1 | 5–5.1 |
-| 600 | 5–5.1 | 5 | 5 | stops keeping up (2 of 3 runs) |
-| 800 | 4.8–5 | 5–5.1 | 4.4–5 | stops keeping up |
-| 1,000 | 5–5.2 | 5–5.2 | 3.6–4.1 | stops keeping up |
+| 400 | 4.9–5 | 4.9–5 | 4.9–5.1 | 4.9–5.1 |
+| 600 | 5–5.1 | 5–5.1 | 5 | 4.1–5.2 |
+| 800 | 5–5.1 | 5 | 5–5.1 | stops keeping up |
+| 1,000 | 5–5.1 | 5–5.2 | 3.9–4.7 | stops keeping up |
 
-The changed-rows port stops keeping up from 1,500 rows; the SPA and Solid both carried on to 2,000 (5.2–5.4 ticks). At 1,000 rows the three that keep up are all near a full core: client busy SPA 894–943, Solid 952–988, changed rows 972–996 ms/s. "Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. At 2,000 rows the SPA drains in 0.2 s and Solid in 0.7 s. In every column the browser is the bottleneck, not the server (below: at 400 rows no server comes near a core even at 100 viewers).
+The changed-rows port stops keeping up from 1,500 rows; the SPA and Solid both carried on to 2,000 (SPA 5.1–5.3, Solid 5.3–5.5 ticks). At 1,000 rows the three that keep up are all near a full core: client busy SPA 804–938, Solid 817–929, changed rows 936–964 ms/s. "Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. At 2,000 rows the SPA drains in 0.2 s and Solid in 0.1 s. In every column the browser is the bottleneck, not the server (below: at 400 rows no server comes near a core even at 100 viewers).
 
 ### Live table, many viewers
 
@@ -161,14 +161,14 @@ Server CPU ms/s, 400 rows, 10% change, 5 ticks/s, 3 rounds; viewers are HTTP rea
 
 | Viewers | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
 | ---: | ---: | ---: | ---: | ---: |
-| 1 | 26–30 | 28–30 | 10–12 | 19–20 |
-| 10 | 48–51 | 45–47 | 23–26 | 48–51 |
-| 25 | 80–85 | 62–66 | 41–44 | 90–98 |
-| 50 | 130–137 | 93–99 | 67–76 | 161–168 |
-| 100 | 226–237 | 148–167 | 120–126 | 309–321 |
-| Wire per viewer | 13.6–14.8 kB/s | 6.8–7.3 kB/s | 6.3–6.8 kB/s | 9.5–9.9 kB/s |
+| 1 | 24–27 | 31–34 | 12 | 19–20 |
+| 10 | 49–52 | 46–49 | 25–28 | 54–58 |
+| 25 | 81–85 | 64–66 | 43 | 96–100 |
+| 50 | 133–143 | 88–90 | 70–72 | 169–178 |
+| 100 | 235–254 | 144–145 | 122–141 | 317–327 |
+| Wire per viewer | 13.5–14.6 kB/s | 7.1–7.7 kB/s | 6.4–6.8 kB/s | 9.3–10.1 kB/s |
 
-Every server does its tick's work once for all viewers and compresses each connection separately, so what grows with viewers is compression, and its order here follows how much each stream hands brotli before compressing: the changed rows, Solid's row operations, the SPA's rows as data, the whole table. For the SPA this was checked directly in an earlier batch at brotli quality 5 with a 16 MB window: with compression off, its server cost at 50 viewers fell from 430 to 50 ms/s. Compression settings move these numbers a lot: at that setting the whole-table port's server cost 4–5x more from 50 viewers up, and its wire was about a third smaller.
+Every server does its tick's work once for all viewers and compresses each connection separately, so what grows with viewers is compression, and its order here follows how much each stream hands brotli before compressing: the changed rows, Solid's row edits, the SPA's rows as data, the whole table. For the SPA this was checked directly in an earlier batch at brotli quality 5 with a 16 MB window: with compression off, its server cost at 50 viewers fell from 430 to 50 ms/s. Compression settings move these numbers a lot: at that setting the whole-table port's server cost 4–5x more from 50 viewers up, and its wire was about a third smaller.
 
 ## How to read the numbers
 

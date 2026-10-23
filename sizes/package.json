@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": { "measure": "node measure.mjs" },
   "dependencies": {
-    "@solidjs/web": "2.0.0-rc.17",
-    "solid-js": "2.0.0-rc.17",
+    "@solidjs/web": "2.0.0-rc.18",
+    "solid-js": "2.0.0-rc.18",
     "rolldown": "1.2.11"
   }
 }
