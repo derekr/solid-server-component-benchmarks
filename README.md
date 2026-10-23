@@ -129,17 +129,16 @@ cd runners && for r in 600 800 1000 1500 2000; do node dbmon-client.mjs $r 0.1 5
 cd runners && node dbmon-drain.mjs dbmon-solid 2000 && node dbmon-drain.mjs dbmon-spa 2000
 ```
 
-Ticks applied per second (of 5), one tab, 10% change, 3 rounds. "Froze" means the page stopped answering for 5 s or more: patches arrived faster than it could morph them.
+Ticks applied per second (of 5), one tab, 10% change, 3 rounds (400 rows is the 15-round run above). "Stops keeping up" means the page fell far enough behind that it stopped answering for 5 s or more:
 
 | Rows | Solid SPA | Solid (`broadcast()`) | Datastar, changed rows | Datastar, whole table |
 | ---: | ---: | ---: | ---: | ---: |
-| 600 | 5–5.1 | 5 | 5 | froze (2 of 3), 4.3 |
-| 800 | 4.8–5 | 5–5.1 | 4.4–5 | froze (3 of 3) |
-| 1,000 | 5–5.2 | 5–5.2 | 3.6–4.1 | froze (3 of 3) |
-| 1,500 | 5.2–5.3 | 5.3 | froze (3 of 3) | froze (3 of 3) |
-| 2,000 | 5.2–5.3 | 5.4 | froze (3 of 3) | froze (3 of 3) |
+| 400 | 4.9–5 | 4.9–5.1 | 4.9–5.1 | 5–5.1 |
+| 600 | 5–5.1 | 5 | 5 | stops keeping up (2 of 3 runs) |
+| 800 | 4.8–5 | 5–5.1 | 4.4–5 | stops keeping up |
+| 1,000 | 5–5.2 | 5–5.2 | 3.6–4.1 | stops keeping up |
 
-At 1,000 rows the three that keep up are all near a full core: client busy SPA 894–943, Solid 952–988, changed rows 972–996 ms/s. "Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. At 2,000 rows the SPA drains in 0.2 s and Solid in 0.7 s: both still keeping up. In every column the browser is the bottleneck, not the server (below: at 400 rows no server comes near a core even at 100 viewers).
+The changed-rows port stops keeping up from 1,500 rows; the SPA and Solid both carried on to 2,000 (5.2–5.4 ticks). At 1,000 rows the three that keep up are all near a full core: client busy SPA 894–943, Solid 952–988, changed rows 972–996 ms/s. "Applied" counts update batches, so `dbmon-drain.mjs` checks for a hidden backlog: it stops the server mid-run and times how long the page keeps updating. At 2,000 rows the SPA drains in 0.2 s and Solid in 0.7 s. In every column the browser is the bottleneck, not the server (below: at 400 rows no server comes near a core even at 100 viewers).
 
 ### Live table, many viewers
 
