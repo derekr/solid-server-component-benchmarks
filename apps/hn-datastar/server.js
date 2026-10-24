@@ -118,12 +118,14 @@ function stories(type, page, list) {
   return h + "</main></div>";
 }
 
-// The replies' collapse. With TOGGLES=signals each comment gets a local
-// signal (`_` prefix: never sent to the server) named after its id; with
-// TOGGLES=delegated a click on a toggle reaches the one handler on the
-// thread, which flips that toggle's `open` class, and app.css swaps the label
-// and hides the replies of a closed toggle. The server renders the open
-// state, so nothing changes when Datastar binds it.
+// The replies' collapse, both ways with one click handler on the thread and
+// no Datastar attribute per comment. With TOGGLES=delegated the handler flips
+// the clicked toggle's `open` class, and app.css swaps the label and hides
+// the replies of a closed toggle. With TOGGLES=signals the state is one
+// signal, the list of collapsed comment ids (`_` prefix: never sent to the
+// server), and the page turns it into CSS: one <style> whose text is a rule
+// per collapsed id. The server renders everything open, so nothing changes
+// when Datastar binds it.
 function replies(c) {
   const children = c.comments.map(comment).join("");
   if (!TOGGLES)
@@ -133,11 +135,9 @@ function replies(c) {
       `<div class="toggle open"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div>` +
       `<ul class="comment-children">${children}</ul>`
     );
-  const s = `$_open${c.id}`;
   return (
-    `<div class="toggle open" data-signals:_open${c.id}="true" data-class:open="${s}">` +
-    `<a data-on:click="${s} = !${s}" data-text="${s} ? '[-]' : '[+] comments collapsed'">[-]</a></div>` +
-    `<ul class="comment-children" data-show="${s}">${children}</ul>`
+    `<div class="toggle open" id="t${c.id}" data-id="${c.id}"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div>` +
+    `<ul class="comment-children">${children}</ul>`
   );
 }
 
@@ -147,9 +147,14 @@ function comment(c) {
 
 // TOGGLES=delegated: every toggle in the thread, nested ones included.
 const DELEGATE = ` data-on:click="evt.target.closest('.toggle')?.classList.toggle('open')"`;
+// TOGGLES=signals: the click adds or removes the toggle's id in $_closed, and
+// the <style> below hides those replies and shows their "collapsed" label.
+const COLLAPSE =
+  ` data-on:click="const id = evt.target.closest('.toggle')?.dataset.id; if (id) $_closed = $_closed.includes(id) ? $_closed.filter(x => x !== id) : [...$_closed, id]"`;
+const COLLAPSE_STYLE = `<style data-text="$_closed.map(id => '#t' + id + ' + .comment-children, #t' + id + ' .open-label { display: none } #t' + id + ' .closed-label { display: inline }').join(' ')"></style>`;
 
 function story(s) {
-  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p><ul class="comment-children"${TOGGLES === "delegated" ? DELEGATE : ""}>${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
+  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"${TOGGLES === "signals" ? ' data-signals:_closed="[]"' : ""}><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p>${TOGGLES === "signals" ? COLLAPSE_STYLE : ""}<ul class="comment-children"${TOGGLES === "delegated" ? DELEGATE : TOGGLES === "signals" ? COLLAPSE : ""}>${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
 }
 
 function user(u) {
