@@ -16,15 +16,19 @@ const ROWS_ONLY = process.env.PATCH === "rows";
 const dir = new URL(".", import.meta.url).pathname;
 const css = readFileSync(dir + "app.css", "utf8");
 const datastarJs = readFileSync(dir + "datastar.js");
+// Compressed once at startup, as the Solid server's build precompresses its
+// static assets (brotli 9).
+const datastarJsBr = zlib.brotliCompressSync(datastarJs, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9 } });
+const acceptsBr = req => /\bbr\b/.test(req.headers["accept-encoding"] || "");
 
 const esc = s =>
-  String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 // Same markup as examples/server-dbmon/src/routes/dashboard.tsx, plus id="dbmon".
 function renderRow(db) {
   let h = `<tr id="db${db.id}"><td class="dbname">${esc(db.name)}</td><td class="query-count"><span class="${db.countClass}">${db.count}</span></td>`;
-    for (const q of db.top5)
-      h += `<td class="Query ${q.className}">${esc(q.formatted)}<div class="popover left"><div class="popover-content">${esc(q.text)}</div><div class="arrow"></div></div></td>`;
+  for (const q of db.top5)
+    h += `<td class="Query ${q.className}">${esc(q.formatted)}<div class="popover left"><div class="popover-content">${esc(q.text)}</div><div class="arrow"></div></div></td>`;
   return h + "</tr>";
 }
 
@@ -101,15 +105,42 @@ ${renderTable(currentDatabases())}
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x");
   if (url.pathname === "/") {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-    return res.end(page());
+    // The page carries the whole table, so it is compressed like the Solid
+    // server's streamed document (at the update stream's settings). It used
+    // to go out uncompressed: 348 kB at 400 rows instead of about 15.
+    const br = acceptsBr(req);
+    const html = page();
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      vary: "accept-encoding",
+      ...(br ? { "content-encoding": "br" } : {})
+    });
+    return res.end(
+      br
+        ? zlib.brotliCompressSync(html, {
+            params: {
+              [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,
+              [zlib.constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY,
+              [zlib.constants.BROTLI_PARAM_LGWIN]: BROTLI_LGWIN
+            }
+          })
+        : html
+    );
   }
   if (url.pathname === "/datastar.js") {
-    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "max-age=3600" });
-    return res.end(datastarJs);
+    // 33 kB raw, 13 kB brotli: what a Datastar app ships.
+    const br = acceptsBr(req);
+    res.writeHead(200, {
+      "content-type": "text/javascript; charset=utf-8",
+      "cache-control": "max-age=3600",
+      vary: "accept-encoding",
+      ...(br ? { "content-encoding": "br" } : {})
+    });
+    return res.end(br ? datastarJsBr : datastarJs);
   }
   if (url.pathname === "/updates") {
-    const br = /\bbr\b/.test(req.headers["accept-encoding"] || "");
+    const br = acceptsBr(req);
     res.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache",

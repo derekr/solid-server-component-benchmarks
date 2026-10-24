@@ -36,6 +36,7 @@ Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
 - **Same simulation.** Both DBMon apps run the same `databases` module (rows, change rate and tick rate set by `DBMON_ROWS`, `DBMON_MUTATIONS`, `DBMON_FPS`), and both compress each connection with brotli quality 4 and a 4 MB window, a common streaming setting (`DBMON_BROTLI=quality,window` overrides it for both).
 - **Same language.** Both DBMon servers are Node. A Go or Rust server would cut the hypermedia stack's server cost; it would not change the client side.
+- **Same first-load compression.** The Datastar page and `datastar.js` are brotli-compressed, as the Solid server compresses its document and assets. They used to go out uncompressed (about 348 kB of page and 33 kB of script at 400 rows, instead of 15 kB and 13 kB). None of the live-table runners below measure first load, so this changes none of their numbers.
 
 ## Rerunning the article's numbers
 
