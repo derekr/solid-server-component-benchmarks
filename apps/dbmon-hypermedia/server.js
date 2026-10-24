@@ -312,6 +312,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
     return res.end(JSON.stringify(globalThis.__dbmon.rows()));
   }
+  if (url.pathname === "/__dbmon/ticks") {
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(JSON.stringify(globalThis.__dbmon.ticks()));
+  }
   if (url.pathname === "/view" && req.method === "POST") {
     let body = "";
     req.on("data", c => (body += c));

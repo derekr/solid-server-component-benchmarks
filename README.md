@@ -35,11 +35,12 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/dbmon-hypermedia` with `PATCH=window` | A scrolling window onto the table: the server renders the 40 rows in view and patches them as you scroll (`-overscan` renders 40 more each side, `-delta` sends a scroll as the rows that entered and left). | 3027, 3029, 3030 |
 | `apps/dbmon-solid` at `/spa-window` | The SPA as a virtualized list (TanStack Virtual): every row streamed as data, only the rows in view rendered. | 3028 |
 | `apps/dbmon-solid` at `/sc-window` | The live server component windowed on the server: a `liveQuery` slice per 20-row grid cell. | 3017 |
+| `apps/dbmon-go` | The Datastar table again in Go, on the Datastar Go SDK: the same page, events and styles (`dbmon-go-rows` is the twin of `dbmon-hypermedia-rows`, and so on), with the SDK's pure-Go brotli or Google's C brotli (`-cbrotli`). | 3031–3049 |
 
 Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
 - **Same simulation.** Both DBMon apps run the same `databases` module (rows, change rate and tick rate set by `DBMON_ROWS`, `DBMON_MUTATIONS`, `DBMON_FPS`), and both compress each connection with brotli quality 4 and a 4 MB window, a common streaming setting (`DBMON_BROTLI=quality,window` overrides it for both).
-- **Same language.** Both DBMon servers are Node. A Go or Rust server would cut the hypermedia stack's server cost; it would not change the client side.
+- **Same language, except where it's the point.** The DBMon servers are Node, except `apps/dbmon-go`, which "Why your backend matters" below compares on purpose.
 - **Same first-load compression.** The Datastar page and `datastar.js` are brotli-compressed, as the Solid server compresses its document and assets. They used to go out uncompressed (about 348 kB of page and 33 kB of script at 400 rows, instead of 15 kB and 13 kB). None of the live-table runners below measure first load, so this changes none of their numbers.
 
 ## Rerunning the article's numbers
@@ -218,7 +219,7 @@ What it shows:
 - **Datastar's other styles move the cost around.** Replace skips the morph (framework 186), but every swapped-in row is a new element, so the browser restyles it (style 133 ms/s in the trace, against about 5 for the others). Signals patch values instead of markup (193), but the page holds a signal for every value on it (11.3 MB of heap), and binding them on load is one long task (see first load below).
 - **Where each one stops keeping up.** At 800 rows the Datastar changed-rows and signals styles apply 3.7 and 3.5 ticks/s of 5. From 1,000 rows the changed rows froze in 5 of 5 rounds; signals froze in 3 of 5 at 1,000 and 5 of 5 from 1,500. Solid and the SPA kept up to 2,000. That is about 2x the rows, the same ratio as the framework time.
 - **Memory doesn't creep.** No app's heap grew more than 1.6 MB over a run (the SPA, which keeps the rows as data).
-- **On the server**, the changed-rows style costs less than Solid at 100 viewers (168 vs 194 ms/s), because there is less to compress.
+- **On the server**, the changed-rows style costs less than Solid at 100 viewers (168 vs 194 ms/s), because there is less to compress. The backend section below takes this further.
 
 ### First load of the live table
 
@@ -282,6 +283,64 @@ What it shows, and why each one does what it does:
 - **Jump gaps need more than overscan, on every stack.** Overscan covers a fling but not a jump. The comments in `apps/dbmon-hypermedia/server.js` and `src/routes/sc-window.tsx` list the mitigations that apply to both: warm the slice on hover or `pointerdown` before the jump; and for scrollbar drags and the End key, which give no warning, use coarse rows or a client-side index with skeleton rows until the real ones arrive.
 - **Two rc.18 issues**, worked around in `sc-window.tsx` and described there: a reactive `style` value on the spacer rendered live-hole markers inside the attribute, so its height is set once; and scrolling back to the slice the page was served with reopened its key at the position hydration stamped on it (`LIVE_RESUME_FROM`), so the slice never came back. Once the viewer has scrolled away, a flag in the key gives every slice a key hydration never saw.
 - **On simplicity, lightly.** The Datastar window is a range check on the server and a scroll POST. The Solid windows needed an adapter for the virtualizer, and the two workarounds above for the SC window. I wouldn't weigh this much, but it is part of the picture.
+
+### Why your backend matters
+
+```sh
+runners/explorations.sh backend
+```
+
+Solid's server components need a JavaScript server, and today that means Node or something close to it. Datastar is a protocol over SSE with SDKs in many languages, so a Datastar app runs on whatever backend the team already has. For an app with live, multiplayer state, that backend is where the work is: every viewer's stream is rendered, compressed and pushed by the server. This part ports the Datastar table to Go (`apps/dbmon-go`, on the Datastar Go SDK 1.2.2) and asks whether the backend changes what viewers see.
+
+The Go port serves the same page, bundle and events as the Node one, so every runner measures it unchanged. What differs:
+
+- **Brotli.** The SDK compresses with andybalholm/brotli, a pure-Go port. Node's zlib uses Google's C library. The `-cbrotli` variants use that C library through cgo, so the language and the compressor can be told apart.
+- **Threads.** Go renders once per tick and gives the result to a goroutine per connection, which writes and compresses it, so per-connection work spreads over every core. Node runs the render and the writes on one event loop (zlib's compression can run on its thread pool).
+- **Flushes.** The SDK flushes after every event, so a window scroll (a signal and a patch) is two brotli flushes where the Node server writes one.
+- **What Solid sends.** Solid on rc.18 sends a changed row as in-place edits, Datastar as row markup, so the two compress different streams to begin with.
+
+The load runs pin the server to 2 cores (`SERVER_CPUS=2,3`), with the browser, the runner and the background viewers on the other 2.
+
+**Many viewers, server CPU** (400 rows, 10% change, 5 ticks/s, 2 rounds, ms/s):
+
+| Viewers | Solid | Solid SPA | Solid SPA window | Solid SC window | Datastar rows, Node | rows, Go | rows, Go + C brotli | signals, Go | signals, Go + C brotli | window, Node | window, Go | window, Go + C brotli |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 43 | 32 | 32 | 22 | 13 | 8 | 6 | 7 | 7 | 15 | 4 | 4 |
+| 25 | 90 | 106 | 106 | 40 | 53 | 72 | 47 | 54 | 38 | 30 | 19 | 17 |
+| 100 | 174 | 324 | 288 | 77 | 160 | 263 | 163 | 173 | 115 | 72 | 62 | 44 |
+| 250 | 367 | 753 | 693 | 153 | 370 | 712 | 403 | 431 | 300 | 143 | 147 | 109 |
+
+At one viewer Go costs less than Node (8 against 13 ms/s for the changed rows, 4 against 15 for the window). From there the cost is compression, and the pure-Go brotli costs more than Node's C brotli (712 against 370 ms/s for the changed rows at 250 viewers). With the same C library the two are close (403 against 370). So Go doesn't make this server cheap by itself. What does is sending less: the signals style and the window cost the least on every backend, and the Solid SC window, which also sends only what is on screen, is next.
+
+**Does it reach the viewer?** One measured viewer while N background viewers load the same server. For the live tables, how long after the tick each update arrives (p50 / p99, ms):
+
+| Viewers | Solid | Solid SPA | Datastar rows, Node | rows, Go | rows, Go + C brotli | signals, Go + C brotli |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | 9 / 32–53 | 7 / 225 | 2–3 / 5 | 2 / 11–13 | 2 / 7–18 | 2 / 3–6 |
+| 100 | 22–24 / 35–45 | 30–33 / 150–165 | 18–19 / 52–84 | 11–17 / 31–39 | 9–10 / 21–24 | 8–9 / 17–19 |
+| 250 | 37–38 / 66–85 | 71–72 / 283–289 | 38–39 / 53–68 | 34–37 / 122–153 | 20–23 / 49–55 | 13 / 36–57 |
+| 500 | 64–67 / 98–159 | 128–152 / 359–543 | 76–77 / 128–135 | 111–136 / 953–1,289 | 45 / 121–126 | 26–31 / 63 |
+
+At 500 viewers Solid delivered 94–100% of ticks and the SPA 85–93%; the rest delivered all of them. With a slow tick (2,000 rows, 100 viewers, 1 round), where rendering is a real share of the server's work, the tail is where Node shows: Solid 71 / 513 ms and the SPA 125 / 1,018 ms, against Datastar's changed rows 63 / 79 ms on Node and 39 / 102 ms on Go with C brotli, at about the same CPU (500–540 ms/s, the SPA 1,124).
+
+For the windows, the measured viewer is a browser jumping to unseen rows (1x CPU, no added latency), while each background viewer scrolls to a random place 4 times a second. Jump p50, ms:
+
+| Viewers | Solid SPA window | Solid SC window | Datastar overscan, Node | overscan, Go | overscan, Go + C brotli |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | 7 | 32–35 | 39 | 33–34 | 33–34 |
+| 50 | 7–8 | 672–865 | 37–42 | 37–40 | 34–36 |
+| 100 | 7–9 | 2,617–2,650 | 35–36 | 36–38 | 34–38 |
+| 200 | 7–8 | 2,716–3,553 | 52–65 | 63–113 | 40–41 |
+| 300 | 8 | 2,507–2,664 | the page timed out | 224–698 | 51–67 |
+
+What it shows:
+
+- **The SPA window never asks the server when it scrolls,** so its jumps stay at 7–9 ms under any load. Its server pays for streaming every row to every viewer instead (950 ms/s at 300 viewers).
+- **The SC window saturates its server at 50 scrolling viewers** (about 1,520 ms/s, both cores), because every grid line crossed is a new live connection and a fresh render. This is the reconnect cost from the windows section, multiplied by viewers, and the clearest place where an API change upstream (changing a live query's arguments on an open connection) would pay off.
+- **The Datastar window on Node holds up to 200 viewers and then the event loop runs out:** at 300 the page timed out. On Go the same app spreads the scroll renders over both cores. With the SDK's brotli it degrades at 300 (224–698 ms); with C brotli it stays at 51–67 ms.
+- **So the backend matters, and in specific ways.** For realtime work with many viewers, what you can tune on the server decides what viewers feel: how work spreads over cores, which compressor you use, and how much you send. On Solid the server is Node: you tune what you send and how you compress it, and scale out with more processes. On Datastar a team can also pick the runtime, and run it in the language it already uses.
+
+One viewer in the browser doesn't see the backend at all. Client busy is the same within noise (Go rows 702 ms/s against 742 for Node rows in the method run, Go window 124 against 118), and so is first load (Go rows: table on screen at 88 ms and live at 193 ms, against 85 and 198 on Node).
 
 ### Notes that aren't benchmarks
 

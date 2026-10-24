@@ -8,6 +8,8 @@ importers:
 
   .: {}
 
+  apps/dbmon-go: {}
+
   apps/dbmon-hypermedia: {}
 
   apps/dbmon-solid:

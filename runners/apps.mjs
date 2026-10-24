@@ -1,6 +1,7 @@
 // Where each app lives, which port it serves on, and the environment it is
 // measured with. `start(name)` runs the app's built server and resolves once
-// it answers; the returned child's pid is what the server-CPU runners read.
+// it answers; the returned child's pid is what the server-CPU runners read
+// (a Go app runs its built binary, so the pid is the server itself).
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
@@ -49,7 +50,33 @@ export const APPS = {
   // window: a slice per 20-row grid cell, one live connection per cell. The
   // stream here is the first cell's, which every viewer at the top shares.
   "dbmon-sc-window": { dir: "dbmon-solid", port: 3017, path: "/sc-window", stream: "/_server/live/getSlice-bfc5e4b9?args=%5B0%2C0%5D" },
+  // The Datastar port again in Go, on the Datastar Go SDK (apps/dbmon-go,
+  // `go build -o dbmon-go .`): the same page, events and styles, so each
+  // dbmon-go* app is the twin of the dbmon-hypermedia* app with the same
+  // suffix. Brotli is the SDK's own (pure-Go andybalholm/brotli); the
+  // -cbrotli twins use the C library Node's zlib uses, to separate the
+  // language from the compressor.
+  ...goApps({
+    "": { port: 3031 },
+    "-rows": { port: 3032, env: { PATCH: "rows" } },
+    "-replace": { port: 3035, env: { PATCH: "replace" } },
+    "-signals": { port: 3036, env: { PATCH: "signals" } },
+    "-window": { port: 3037, env: { PATCH: "window" } },
+    "-window-overscan": { port: 3039, env: { PATCH: "window", DBMON_OVERSCAN: "40" } },
+    "-window-delta": { port: 3040, env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_SCROLL_PATCH: "delta" } },
+    "-cbrotli": { port: 3041, env: { DBMON_BROTLI_IMPL: "cbrotli" } },
+    "-rows-cbrotli": { port: 3042, env: { PATCH: "rows", DBMON_BROTLI_IMPL: "cbrotli" } },
+    "-signals-cbrotli": { port: 3046, env: { PATCH: "signals", DBMON_BROTLI_IMPL: "cbrotli" } },
+    "-window-cbrotli": { port: 3047, env: { PATCH: "window", DBMON_BROTLI_IMPL: "cbrotli" } },
+    "-window-overscan-cbrotli": { port: 3049, env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_BROTLI_IMPL: "cbrotli" } }
+  })
 };
+
+function goApps(variants) {
+  return Object.fromEntries(
+    Object.entries(variants).map(([suffix, app]) => ["dbmon-go" + suffix, { dir: "dbmon-go", cmd: ["./dbmon-go"], stream: "/updates", ...app }])
+  );
+}
 
 export const url = name => `http://localhost:${APPS[name].port}`;
 // The page an app is measured on.
@@ -58,7 +85,10 @@ export const page = name => url(name) + (APPS[name].path ?? "/");
 export async function start(name, env = {}) {
   const app = APPS[name];
   if (!app) throw new Error(`unknown app ${name}`);
-  const child = spawn("node", ["server.js"], {
+  // SERVER_CPUS=2,3 pins the server to those cores (taskset execs, so the
+  // pid is still the server's), to keep it apart from the browser and runner.
+  const [cmd, ...args] = [...(process.env.SERVER_CPUS ? ["taskset", "-c", process.env.SERVER_CPUS] : []), ...(app.cmd ?? ["node", "server.js"])];
+  const child = spawn(cmd, args, {
     cwd: root + (app.dir ?? name),
     env: { ...process.env, ...app.env, ...env, PORT: String(app.port) },
     stdio: process.env.SERVER_LOG ? "inherit" : "ignore"
