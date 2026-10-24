@@ -19,8 +19,14 @@ export const APPS = {
   "hn-spa-toggles": { port: 3007, env: HN },
   "hn-next-rsc": { port: 3008, env: HN },
   "hn-qwik": { port: 3010, env: HN },
+  // Datastar, one server: <details> (as hn-sc), or a toggle per comment (as
+  // hn-sc-toggles) built from signals or as a single click handler.
+  "hn-datastar": { port: 3011, env: HN },
+  "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
+  "hn-datastar-handler": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "handler" } },
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
+  "store-datastar": { port: 3015 },
   "dbmon-solid": { port: 3020, stream: "/_server/live/getDatabases-9c9967e7" },
   // The Datastar port in its two styles: the whole table re-sent and morphed
   // every tick, or only the changed rows, each morphed by id (PATCH=rows).

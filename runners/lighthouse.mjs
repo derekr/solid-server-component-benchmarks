@@ -3,7 +3,7 @@
 // runs once per round, so slow stretches of the machine hit all of them.
 //
 // usage: node lighthouse.mjs <set> [rounds=15] [outDir=results/<set>]
-//   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City), hn-details (story page, <details>), store (listing + product),
+//   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City, Datastar), hn-details (story page, <details>), store (listing + product),
 //         dbmon (the live table at 400 rows: Solid SC, Solid SPA, Datastar changed rows and signals)
 //
 // Prints one JSON line per run and a median table at the end; the raw
@@ -16,15 +16,15 @@ import { APPS, start, stop, url } from "./apps.mjs";
 
 const SETS = {
   hn: {
-    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik"],
+    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik", "hn-datastar-toggles", "hn-datastar-handler"],
     pages: { story: "/stories/30186326" }
   },
   "hn-details": {
-    apps: ["hn-sc", "hn-spa"],
+    apps: ["hn-sc", "hn-spa", "hn-datastar"],
     pages: { story: "/stories/30186326" }
   },
   store: {
-    apps: ["store-sc", "store-spa"],
+    apps: ["store-sc", "store-spa", "store-datastar"],
     pages: { listing: "/", product: "/product/1" }
   },
   // The live table's first load, at 400 rows. A page path of null is each

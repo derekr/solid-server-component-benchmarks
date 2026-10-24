@@ -1,0 +1,11 @@
+{
+  "name": "store-datastar",
+  "description": "The storefront on Datastar: the same listing and product page as store-sc and store-spa, rendered on the server as plain HTML, with the cart as server state patched over SSE and local UI state in signals. A hand-written port in Datastar's style, not one of Datastar's own demos.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo nothing to build",
+    "start": "node server.js"
+  }
+}

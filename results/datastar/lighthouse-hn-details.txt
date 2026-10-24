@@ -1,0 +1,51 @@
+{"round":1,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":60,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":1,"app":"hn-spa","page":"story","score":84,"fcp":2597,"lcp":2636,"tbt":358,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":1,"app":"hn-datastar","page":"story","score":90,"fcp":1856,"lcp":1856,"tbt":366,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":2,"app":"hn-sc","page":"story","score":96,"fcp":2102,"lcp":2129,"tbt":121,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":2,"app":"hn-spa","page":"story","score":84,"fcp":2606,"lcp":2640,"tbt":358,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":2,"app":"hn-datastar","page":"story","score":90,"fcp":1802,"lcp":1802,"tbt":348,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":3,"app":"hn-sc","page":"story","score":84,"fcp":2105,"lcp":2356,"tbt":462,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":3,"app":"hn-spa","page":"story","score":79,"fcp":2553,"lcp":2627,"tbt":543,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":3,"app":"hn-datastar","page":"story","score":93,"fcp":1802,"lcp":1808,"tbt":281,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":4,"app":"hn-sc","page":"story","score":87,"fcp":2149,"lcp":2394,"tbt":384,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":4,"app":"hn-spa","page":"story","score":77,"fcp":2607,"lcp":2653,"tbt":615,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":4,"app":"hn-datastar","page":"story","score":89,"fcp":1851,"lcp":1851,"tbt":378,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":5,"app":"hn-sc","page":"story","score":94,"fcp":2107,"lcp":2107,"tbt":191,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":5,"app":"hn-spa","page":"story","score":77,"fcp":2604,"lcp":2642,"tbt":610,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":5,"app":"hn-datastar","page":"story","score":92,"fcp":1848,"lcp":1859,"tbt":284,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":6,"app":"hn-sc","page":"story","score":92,"fcp":2151,"lcp":2151,"tbt":244,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":6,"app":"hn-spa","page":"story","score":84,"fcp":2604,"lcp":2640,"tbt":359,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":6,"app":"hn-datastar","page":"story","score":88,"fcp":1802,"lcp":1855,"tbt":423,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":7,"app":"hn-sc","page":"story","score":95,"fcp":2170,"lcp":2170,"tbt":154,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":7,"app":"hn-spa","page":"story","score":83,"fcp":2553,"lcp":2612,"tbt":405,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":7,"app":"hn-datastar","page":"story","score":94,"fcp":1848,"lcp":1848,"tbt":253,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":8,"app":"hn-sc","page":"story","score":96,"fcp":2106,"lcp":2129,"tbt":117,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":8,"app":"hn-spa","page":"story","score":81,"fcp":2604,"lcp":2674,"tbt":468,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":8,"app":"hn-datastar","page":"story","score":90,"fcp":1850,"lcp":1850,"tbt":372,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":9,"app":"hn-sc","page":"story","score":97,"fcp":2106,"lcp":2106,"tbt":51,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":9,"app":"hn-spa","page":"story","score":79,"fcp":2558,"lcp":2629,"tbt":551,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":9,"app":"hn-datastar","page":"story","score":90,"fcp":1802,"lcp":1824,"tbt":355,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":10,"app":"hn-sc","page":"story","score":96,"fcp":2107,"lcp":2107,"tbt":136,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":10,"app":"hn-spa","page":"story","score":80,"fcp":2555,"lcp":2617,"tbt":505,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":10,"app":"hn-datastar","page":"story","score":88,"fcp":1802,"lcp":1802,"tbt":437,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":11,"app":"hn-sc","page":"story","score":97,"fcp":2106,"lcp":2127,"tbt":42,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":11,"app":"hn-spa","page":"story","score":84,"fcp":2628,"lcp":2659,"tbt":378,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":11,"app":"hn-datastar","page":"story","score":92,"fcp":1849,"lcp":1853,"tbt":292,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":12,"app":"hn-sc","page":"story","score":96,"fcp":2158,"lcp":2184,"tbt":120,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":12,"app":"hn-spa","page":"story","score":80,"fcp":2602,"lcp":2642,"tbt":500,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":12,"app":"hn-datastar","page":"story","score":90,"fcp":1844,"lcp":1844,"tbt":355,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":13,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":25,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":13,"app":"hn-spa","page":"story","score":76,"fcp":2598,"lcp":2664,"tbt":666,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":13,"app":"hn-datastar","page":"story","score":88,"fcp":1802,"lcp":1802,"tbt":421,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":14,"app":"hn-sc","page":"story","score":97,"fcp":2158,"lcp":2158,"tbt":36,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":14,"app":"hn-spa","page":"story","score":83,"fcp":2599,"lcp":2634,"tbt":413,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":14,"app":"hn-datastar","page":"story","score":88,"fcp":1802,"lcp":1802,"tbt":416,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+{"round":15,"app":"hn-sc","page":"story","score":96,"fcp":2105,"lcp":2105,"tbt":104,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
+{"round":15,"app":"hn-spa","page":"story","score":86,"fcp":2599,"lcp":2631,"tbt":306,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":15,"app":"hn-datastar","page":"story","score":88,"fcp":1855,"lcp":1880,"tbt":403,"cls":0,"totalKB":205,"docKB":189.6,"jsKB":13.2}
+
+| page | app | runs | score | TBT ms | FCP ms | LCP ms | CLS | total kB | doc kB | JS kB |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| story | hn-sc | 15 | 96 | 120 | 2106 | 2129 | 0 | 241 | 193 | 45 |
+| story | hn-spa | 15 | 81 | 468 | 2599 | 2640 | 0 | 338 | 299.3 | 36.9 |
+| story | hn-datastar | 15 | 90 | 366 | 1844 | 1848 | 0 | 205 | 189.6 | 13.2 |

@@ -4,7 +4,10 @@
 // The server-component apps fetch a frame (markup + slot records); the SPAs
 // fetch JSON and render it on the client.
 //
-// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik] [cpuRate=1]
+// The Datastar apps are multi-page: the click loads a new document, so the
+// click time is kept in sessionStorage and read back from the new page.
+//
+// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-handler] [cpuRate=1]
 //
 // The feed page reads the live HN API; if that is unreachable the feed shows
 // its error state, but the app is still running and the story itself comes
@@ -13,9 +16,13 @@ import { chromium } from "playwright";
 import { start, stop, url } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 5);
-const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik").split(",");
+const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-handler").split(",");
 const RATE = Number(process.argv[4] || 1);
 const STORY = "/stories/30186326";
+// Code and styles, as opposed to the data the navigation fetched. A
+// multi-page app's new document fetches its script and stylesheet again
+// here, because the runner disables the HTTP cache.
+const CODE = /\/(assets|build|_next\/static)\/|\/(datastar\.js|app\.css)$/;
 
 async function once(browser, base) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -46,18 +53,21 @@ async function once(browser, base) {
       a.style.cssText = "position:fixed;right:0;bottom:0;opacity:0";
       document.body.appendChild(a);
     }
-    addEventListener("pointerdown", () => (window.__t0 = performance.now()), { capture: true, once: true });
+    addEventListener("pointerdown", () => (sessionStorage.__t0 = performance.timeOrigin + performance.now()), {
+      capture: true,
+      once: true
+    });
   }, STORY);
   await page.click("a[data-bench-story]");
-  const painted = await page.evaluate(
-    () =>
-      new Promise(res => {
-        (function poll() {
-          if (document.querySelectorAll(".comment").length > 1000) res(performance.now() - window.__t0);
-          else requestAnimationFrame(poll);
-        })();
-      })
-  );
+  const painted = await (
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll(".comment").length > 1000 &&
+        performance.timeOrigin + performance.now() - Number(sessionStorage.__t0),
+      null,
+      { polling: "raf", timeout: 60000 }
+    )
+  ).jsonValue();
   // Only what the navigation itself fetched: requests issued after the thread
   // is on screen (prefetches of links in it, for one) are not counted.
   counting = false;
@@ -66,8 +76,8 @@ async function once(browser, base) {
   const list = Object.values(reqs);
   return {
     paintedMs: Math.round(painted),
-    dataKB: +list.filter(r => !/\/(assets|build|_next\/static)\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
-    codeKB: +list.filter(r => /\/(assets|build|_next\/static)\//.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
+    dataKB: +list.filter(r => !CODE.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
+    codeKB: +list.filter(r => CODE.test(r.url)).reduce((s, r) => s + r.kb, 0).toFixed(1),
     requests: list.map(r => r.url.replace(base, "").slice(0, 60))
   };
 }
