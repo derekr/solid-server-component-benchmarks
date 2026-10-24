@@ -30,7 +30,7 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/hn-datastar` with `TOGGLES` | The toggles app on Datastar: every comment with replies gets a toggle, either a local signal bound to its label, class and visibility (`TOGGLES=signals`, port 3012) or a single click handler that flips a class (`TOGGLES=handler`, port 3016). | 3012, 3016 |
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
-| `apps/store-datastar` | The store on Datastar, rendered on the server as plain HTML. The cart is server state: quick add and add to cart POST, and the server answers with patches for the header's count, the mini-cart and the button. The wishlist hearts, the mini-cart's open state and the buy box's colour, size and quantity are signals on the page. | 3015 |
+| `apps/store-datastar` | The store on Datastar, rendered on the server as plain HTML. The cart is server state: quick add and add to cart POST, and the server answers with patches for the header's count, the mini-cart and the button. Until the answer lands, an add button says "Adding…". The listing's quick adds and wishlist hearts share one delegated click handler on the grid; the mini-cart's open state and the buy box's colour, size and quantity are signals on the page. | 3015 |
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
 | `apps/dbmon-solid` at `/spa` | The same table rendered in the browser as an SPA: the server streams the rows as data through a `broadcast()` data source and a keyed `For` swaps each changed row (`/spa-store` reconciles into a store instead). | 3023, 3024 |
 | `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4, rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. Two styles: the whole table every tick (port 3021), or only the changed rows (`PATCH=rows`, port 3022). A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3021, 3022 |
@@ -186,6 +186,7 @@ cd runners && node lighthouse.mjs hn 15 && node lighthouse.mjs hn-details 15 && 
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar
 cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-handler
 cd runners && node navigation.mjs 5
+cd runners && node store-add.mjs 7
 ```
 
 The HN and store pages ported to Datastar (`hn-datastar`, `store-datastar`), measured with the same runners. The point is not a winner: it is what a server-rendered, multi-page hypermedia app costs on the same pages, and where its costs sit. Every app in a set was rerun in the same 15 interleaved rounds, on 2026-10-24 on the machine in `results/dbmon/machine.txt`, so compare within these tables, not with the rerun column above. Raw output is in `results/datastar/`.
@@ -224,12 +225,22 @@ Datastar's script time is close to the SC page's, and its TBT is still three tim
 
 | Page | Solid SC | Solid SPA | Datastar |
 | --- | --- | --- | --- |
-| Listing: score, TBT, FCP | 100, 51 ms, 1.25 s | 99, 92 ms, 1.10 s | 100, 79 ms, 0.95 s |
-| Product: score, TBT, FCP | 100, 55 ms, 1.25 s | 100, 67 ms, 1.10 s | 100, 0 ms, 0.90 s |
+| Listing: score, TBT, FCP | 100, 50 ms, 1.21 s | 100, 88 ms, 1.10 s | 100, 0 ms, 0.95 s |
+| Product: score, TBT, FCP | 100, 50 ms, 1.25 s | 100, 64 ms, 1.06 s | 100, 0 ms, 0.90 s |
 | Transferred (listing) | 59 kB | 51 kB | 18 kB |
 | JavaScript | 48.7 kB | 38.7 kB | 13.2 kB |
 
-All three score 100 or close to it. Datastar paints first, with the smallest page and no hydration data. Where the cart lives is the trade: on Datastar a quick add is a round trip to the server (the POST's answer patches the badge), on Solid it is a client signal.
+All three score 100. Datastar paints first, with the smallest page and no hydration data. Its listing has no bindings per tile: every quick add and wishlist heart goes through one click handler on the grid, so start-up has 48 tiles' worth less to bind, and the listing's TBT went from 79 to 0 ms when the tiles' own handlers and signals were removed.
+
+**Adding to the cart**, from the click (`cd runners && node store-add.mjs 7`): a quick add on a listing tile at 4x CPU, 7 rounds, medians, timed to the first frame that shows each change:
+
+| | Solid SC | Solid SPA | Datastar |
+| --- | ---: | ---: | ---: |
+| The button shows the click | 20 ms | 19 ms | 25 ms ("Adding…") |
+| The cart count changes | 20 ms | 19 ms | 54 ms |
+| The cart count changes, 150 ms round trip | 19 ms | 19 ms | 189 ms |
+
+The two apps do different things here, so the second and third rows aren't a race. The Solid twins keep the cart in a client signal and never tell the server, so the count changes in the click's frame, and the cart is gone on reload. Datastar's cart is server state: the add is a POST, and the count changes when the server has it, a round trip later. What the user needs at once is a sign that the click landed, without being told the item is in the cart before it is. Datastar's button says "Adding…" in the click's frame and the server's answer turns it into "Added ✓". Before that change, the button too waited for the round trip (190–200 ms at 150 ms). A Solid store that saved its cart would have the same choice to make: a count that may have to roll back, or a pending state until the server answers.
 
 ## Live table: explorations
 

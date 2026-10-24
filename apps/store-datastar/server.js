@@ -6,11 +6,18 @@
 // The interactive parts are split the way a Datastar app usually splits them:
 // - The cart is server state (in memory, per cookie). Quick add and the buy
 //   box's add to cart POST to the server, which answers with SSE patches for
-//   the header's count, the mini-cart's lines and the tile's button. In the
-//   Solid twins the cart is a client signal in the shell.
-// - Purely local UI state is a Datastar signal on the page: the mini-cart's
-//   open state, each tile's wishlist heart (`_` prefixed, so never sent), and
-//   the buy box's colour, size and quantity, which the add request sends.
+//   the header's count, the mini-cart's lines and the tile's button. Until
+//   the answer lands, the button says "Adding…", so the click is
+//   acknowledged at once and the cart changes only when the server has it.
+//   In the Solid twins the cart is a client signal in the shell and never
+//   reaches the server, so it updates in the click's frame but is lost on
+//   reload.
+// - The listing's 48 tiles carry no bindings of their own: one delegated
+//   click handler on the grid serves every quick add and wishlist heart (the
+//   heart is a class on its button, local to the page).
+// - The rest of the local UI state is Datastar signals: the mini-cart's open
+//   state, and the buy box's colour, size and quantity, which the add request
+//   sends.
 //
 // Compressed like the other apps' servers: pages through streamed brotli
 // quality 4, static assets once at quality 9.
@@ -78,12 +85,19 @@ const shell = lines =>
   `<div class="mini-cart" style="display: none" data-show="$_cart">${cartLines(lines)}</div>`;
 
 const quickAddButton = (id, added) =>
-  `<button id="add-${id}" class="add" data-on:click="@post('/cart/${id}')">${added ? "Added ✓" : "Quick add"}</button>`;
+  `<button id="add-${id}" class="add" data-id="${id}">${added ? "Added ✓" : "Quick add"}</button>`;
 
-// Each tile's heart is a local signal named after the product.
 const quickAdd = p =>
-  `<div class="quick" data-signals:_fav${p.id}="false">${quickAddButton(p.id, false)}` +
-  `<button class="fav" aria-pressed="false" data-class:on="$_fav${p.id}" data-attr:aria-pressed="String($_fav${p.id})" data-on:click="$_fav${p.id} = !$_fav${p.id}">♥</button></div>`;
+  `<div class="quick">${quickAddButton(p.id, false)}<button class="fav" aria-pressed="false">♥</button></div>`;
+
+// The grid's one handler. A quick add says "Adding…" in the click's frame
+// and POSTs; the server's patch replaces the button with "Added ✓". A heart
+// toggles on the page alone.
+const gridClick =
+  "const add = evt.target.closest('button.add'); " +
+  "if (add) { add.textContent = 'Adding…'; add.disabled = true; @post('/cart/' + add.dataset.id) } " +
+  "const fav = evt.target.closest('button.fav'); " +
+  "if (fav) fav.setAttribute('aria-pressed', String(fav.classList.toggle('on')))";
 
 // The buy box's state is three signals (`color`, `size`, `qty`); the add
 // request sends them. Stock per size is rendered into a computed signal.
@@ -95,7 +109,7 @@ function buyBox(p) {
     `<div class="sizes">${p.sizes.map(s => `<button class="size"${s.stock ? "" : " disabled"} data-class:on="$size === '${s.size}'" data-on:click="$size = '${s.size}'">${s.size}</button>`).join("")}</div>` +
     `<p class="stock" data-text="$size ? ($_stock < 3 ? 'Only ' + $_stock + ' left' : 'In stock') : 'Choose a size'">Choose a size</p>` +
     `<div class="qty"><button class="dec" data-on:click="$qty = Math.max(1, $qty - 1)">−</button><span data-text="$qty">1</span><button class="inc" data-on:click="$qty = $qty + 1">+</button></div>` +
-    `<button class="add" disabled data-attr:disabled="!$size" data-on:click="@post('/cart/${p.id}')" data-text="'Add to cart · $' + ($qty * ${p.price} / 100).toFixed(2)">Add to cart · ${money(p.price)}</button>` +
+    `<button class="add" disabled data-indicator:_adding data-attr:aria-busy="String($_adding)" data-attr:disabled="!$size || $_adding" data-on:click="@post('/cart/${p.id}')" data-text="$_adding ? 'Adding…' : 'Add to cart · $' + ($qty * ${p.price} / 100).toFixed(2)">Add to cart · ${money(p.price)}</button>` +
     `</div>`
   );
 }
@@ -109,7 +123,7 @@ const tile = p =>
 
 async function listing() {
   const products = await getProducts();
-  return `<div class="store">${filters()}<main><h1>All products</h1><p class="count">${products.length} items</p><ul class="grid">${products.map(tile).join("")}</ul></main></div>`;
+  return `<div class="store">${filters()}<main><h1>All products</h1><p class="count">${products.length} items</p><ul class="grid" data-on:click="${gridClick}">${products.map(tile).join("")}</ul></main></div>`;
 }
 
 async function product(id) {
