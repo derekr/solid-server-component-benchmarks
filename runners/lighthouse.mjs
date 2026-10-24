@@ -3,7 +3,8 @@
 // runs once per round, so slow stretches of the machine hit all of them.
 //
 // usage: node lighthouse.mjs <set> [rounds=15] [outDir=results/<set>]
-//   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City), hn-details (story page, <details>), store (listing + product)
+//   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City), hn-details (story page, <details>), store (listing + product),
+//         dbmon (the live table at 400 rows: Solid SC, Solid SPA, Datastar changed rows and signals)
 //
 // Prints one JSON line per run and a median table at the end; the raw
 // Lighthouse reports land in outDir.
@@ -11,7 +12,7 @@ import fs from "node:fs";
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer-core";
 import { chromium } from "playwright";
-import { start, stop, url } from "./apps.mjs";
+import { APPS, start, stop, url } from "./apps.mjs";
 
 const SETS = {
   hn: {
@@ -25,6 +26,16 @@ const SETS = {
   store: {
     apps: ["store-sc", "store-spa"],
     pages: { listing: "/", product: "/product/1" }
+  },
+  // The live table's first load, at 400 rows. A page path of null is each
+  // app's own page (the SPA lives at /spa). No row changes
+  // (DBMON_MUTATIONS=0): with the table ticking, Lighthouse's trace runs
+  // until its load timeout and its TBT counts seconds of live updates, not
+  // the load. dbmon-load.mjs times the load with the table live.
+  dbmon: {
+    apps: ["dbmon-solid", "dbmon-spa", "dbmon-hypermedia-rows", "dbmon-hypermedia-signals"],
+    pages: { table: null },
+    env: { DBMON_ROWS: "200", DBMON_MUTATIONS: "0", DBMON_FPS: "5" }
   }
 };
 
@@ -35,7 +46,7 @@ const out = outArg ?? new URL(`../results/${setName}`, import.meta.url).pathname
 fs.mkdirSync(out, { recursive: true });
 
 const servers = [];
-for (const app of set.apps) servers.push(await start(app));
+for (const app of set.apps) servers.push(await start(app, set.env));
 
 async function once(target, file) {
   const browser = await puppeteer.launch({
@@ -76,7 +87,7 @@ try {
   for (let round = 1; round <= +roundsArg; round++)
     for (const [page, path] of Object.entries(set.pages))
       for (const app of set.apps) {
-        const r = await once(url(app) + path, `${out}/${app}-${page}-${round}.json`);
+        const r = await once(url(app) + (path ?? APPS[app].path ?? "/"), `${out}/${app}-${page}-${round}.json`);
         const row = { round, app, page, ...r };
         runs.push(row);
         console.log(JSON.stringify(row));

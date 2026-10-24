@@ -84,10 +84,12 @@ const signalEvent = signals => `event: datastar-patch-signals\ndata: signals ${J
 // (the page it loaded may be a tick or two old).
 const snapshot = dbs => (MODE === "signals" ? signalEvent(signalsOf(dbs)) : patchEvent(renderTable(dbs)));
 
-// What a tick sends, given the indexes of the rows that changed.
+// What a tick sends, given the indexes of the rows that changed. null =
+// nothing to send.
 function tickEvent(dbs, changedAt) {
   const changed = changedAt.map(i => dbs[i]);
   if (MODE === "whole") return patchEvent(renderTable(dbs));
+  if (!changed.length) return null;
   if (MODE === "signals") return signalEvent(signalsOf(changed));
   return patchEvent(changed.map(renderRow).join(""), MODE === "replace" ? "replace" : undefined);
 }
@@ -112,8 +114,10 @@ function startLoop() {
       const changedAt = [];
       dbs.forEach((db, i) => db !== prev[i] && changedAt.push(i));
       prev = dbs;
-      const event = Buffer.from(tickEvent(dbs, changedAt));
-      for (const send of clients) send(event);
+      const event = tickEvent(dbs, changedAt);
+      if (!event) continue;
+      const buf = Buffer.from(event);
+      for (const send of clients) send(buf);
     }
   })();
 }

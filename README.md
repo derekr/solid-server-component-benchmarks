@@ -212,16 +212,37 @@ What it shows:
 
 - **Most of the client's time is the browser's.** With a fixed layout the browser's share drops to about 205–240 ms/s for every app except replace, and client busy roughly halves. What is left between the apps is the framework's own work.
 - **There, Solid does about half the work of a morph, and that is the honest reason it wins this table.** Solid's compiled updates know which text node changed and write to it (100–125 ms/s). A morph has to find out: Datastar parses each changed row's new markup and compares it with the row on the page (225–265 ms/s for the changed rows). Re-sending the whole table makes the morph walk every row (570 ms/s). This is the case fine-grained reactivity is built for, a few cells changing in a big, stable DOM.
-- **Datastar's other styles move the cost around.** Replace skips the morph (framework 186), but every swapped-in row is a new element, so the browser restyles it (style 133 ms/s in the trace, against about 5 for the others). Signals patch values instead of markup (193), but the page holds a signal for every value on it (11.3 MB of heap), and binding them on load is one long task.
+- **Datastar's other styles move the cost around.** Replace skips the morph (framework 186), but every swapped-in row is a new element, so the browser restyles it (style 133 ms/s in the trace, against about 5 for the others). Signals patch values instead of markup (193), but the page holds a signal for every value on it (11.3 MB of heap), and binding them on load is one long task (see first load below).
 - **Where each one stops keeping up.** At 800 rows the Datastar changed-rows and signals styles apply 3.7 and 3.5 ticks/s of 5. From 1,000 rows the changed rows froze in 5 of 5 rounds; signals froze in 3 of 5 at 1,000 and 5 of 5 from 1,500. Solid and the SPA kept up to 2,000. That is about 2x the rows, the same ratio as the framework time.
 - **Memory doesn't creep.** No app's heap grew more than 1.6 MB over a run (the SPA, which keeps the rows as data).
 - **On the server**, the changed-rows style costs less than Solid at 100 viewers (168 vs 194 ms/s), because there is less to compress.
+
+### First load of the live table
+
+```sh
+runners/explorations.sh load
+```
+
+The article measures first load on the HN and store pages but not on the table. `dbmon-load.mjs` loads each page in a cold browser at 4x CPU (400 rows, 7 rounds) and times when the table is on screen and when the first live update lands. Lighthouse's mobile preset then scores the same pages (15 interleaved rounds). For Lighthouse the table doesn't tick, because a live table keeps Lighthouse's trace from settling and every update would count as blocking time.
+
+| | Solid (`broadcast()`) | Solid SPA | Datastar, changed rows | Datastar, signals |
+| --- | ---: | ---: | ---: | ---: |
+| Table on screen | 163 ms | 601 ms | 85 ms | 199 ms |
+| First live update | 251 ms | 836 ms | 198 ms | 272 ms |
+| Main thread busy until live | 488 ms | 891 ms | 492 ms | 429 ms |
+| HTML / JS, brotli | 15.7 / 64.3 kB | 0.8 / 71.9 kB (+32 kB of rows) | 15.1 / 12.9 kB | 46.8 / 12.9 kB |
+| Lighthouse score | 99 | 97 | 99 | 70 |
+| Total Blocking Time | 75 ms | 170 ms | 98 ms | 3,707 ms |
+| FCP / LCP | 1.42 / 1.42 s | 1.25 / 2.10 s | 0.95 / 1.24 s | 1.13 / 1.14 s |
+| Transferred | 98 kB | 105 kB | 43 kB | 73 kB |
+
+The whole-table and replace styles load like the changed rows (table at 100 and 79 ms), since their first page is the same. The server-rendered pages show the table almost at once, and the SPA waits for its rows to arrive as data. Most of the difference in bytes is JavaScript: 64 kB for Solid with its router and server-components runtime, 13 kB for the Datastar bundle. The signals page is the outlier. Its HTML carries every value twice, as markup and as a signal, plus a binding attribute for each, and Datastar binds them all in one long task when it starts, which Lighthouse counts as 3.7 s of blocking time. Binding in chunks that yield to the browser, the way Solid spreads out hydration, would be the fix on Datastar's side.
 
 ### Notes that aren't benchmarks
 
 - **Datastar's morph is pluggable.** The morph is how Datastar applies a patch by default, not a fixed part of it. A faster morph that costs a few more kB is a legitimate trade, and nothing here explores it.
 - **Morphing a whole region is a default, not a rule.** Datastar sends a whole region and morphs it by default because that is simple to reason about: the server renders what the page should look like, and there is no client state to tear. When a region turns out to be hot, you measure and narrow the patch to the parts that change. The changed-rows, replace and signals styles above are that step.
-- **None of these benchmarks are what Datastar is aiming at.** Its claim is to be fast enough for most real workloads, not to win a table re-rendered five times a second in full. 
+- **None of these benchmarks are what Datastar is aiming at.** Its claim is to be fast enough for most real workloads, not to win a table re-rendered five times a second in full. The sections above try workloads closer to real ones.
 
 ## How to read the numbers
 
