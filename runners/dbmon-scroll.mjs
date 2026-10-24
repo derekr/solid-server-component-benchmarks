@@ -113,5 +113,5 @@ async function once(name) {
 
 const names = process.env.APPS
   ? process.env.APPS.split(",")
-  : ["dbmon-spa-window", "dbmon-sc-window", "dbmon-hypermedia-window", "dbmon-hypermedia-window-overscan", "dbmon-hypermedia-window-delta"];
+  : ["dbmon-spa-window", "dbmon-sc-window", "dbmon-hypermedia-window", "dbmon-hypermedia-window-overscan20", "dbmon-hypermedia-window-overscan", "dbmon-hypermedia-window-delta"];
 for (const n of names) console.log(JSON.stringify(await once(n)));

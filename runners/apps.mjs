@@ -43,6 +43,9 @@ export const APPS = {
   // The window with latency mitigation from derekr/largediff: 40 rows (about
   // two viewports) rendered above and below what's on screen.
   "dbmon-hypermedia-window-overscan": { dir: "dbmon-hypermedia", port: 3029, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "40" } },
+  // The window with 20 rows above and below, the overscan the Solid
+  // server-component window renders, for a like-for-like scroll.
+  "dbmon-hypermedia-window-overscan20": { dir: "dbmon-hypermedia", port: 3018, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "20" } },
   // The same, a scroll sent as only the rows that entered and left.
   "dbmon-hypermedia-window-delta": { dir: "dbmon-hypermedia", port: 3030, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_SCROLL_PATCH: "delta" } },
   // The Solid app rendered in the browser from streamed JSON: rows swapped
