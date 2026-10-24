@@ -1,9 +1,9 @@
 client navigation to the story, cpu 1x, 5 runs, medians
-hn-sc            data 191.2 kB + lazy code 3.9 kB, on screen 275 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-CnjOh-I5.js
-hn-spa           data 199 kB + lazy code 0 kB, on screen 306 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
-hn-sc-toggles    data 248 kB + lazy code 5.2 kB, on screen 565 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-GraLhm2E.js /assets/regions-CPNjRgRx.js
-hn-spa-toggles   data 199 kB + lazy code 0 kB, on screen 288 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
-hn-qwik          data 222.4 kB + lazy code 1.2 kB, on screen 891 ms, requests: /build/q-BkbxYjsl.js /build/q-Cwe4QdqH.js /stories/30186326?qfunc=wgKmgPUJvZ8 /q-data.json /new/q-data.json /show/q-data.json /ask/q-data.json /job/q-data.json /stories/30186326/q-data.json
-hn-datastar      data 189.6 kB + lazy code 14.8 kB, on screen 429 ms, requests: /stories/30186326 /app.css /datastar.js
-hn-datastar-toggles data 206.3 kB + lazy code 14.8 kB, on screen 426 ms, requests: /stories/30186326 /app.css /datastar.js
-hn-datastar-handler data 189.5 kB + lazy code 14.8 kB, on screen 402 ms, requests: /stories/30186326 /app.css /datastar.js
+hn-sc            data 191.2 kB + lazy code 3.9 kB, on screen 273 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-CnjOh-I5.js
+hn-spa           data 199 kB + lazy code 0 kB, on screen 287 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
+hn-sc-toggles    data 248 kB + lazy code 5.2 kB, on screen 537 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%7B%22params%22%3A%7 /assets/wire-GraLhm2E.js /assets/regions-CPNjRgRx.js
+hn-spa-toggles   data 199 kB + lazy code 0 kB, on screen 293 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
+hn-qwik          data 222.4 kB + lazy code 1.2 kB, on screen 854 ms, requests: /build/q-BkbxYjsl.js /build/q-Cwe4QdqH.js /stories/30186326?qfunc=wgKmgPUJvZ8 /q-data.json /new/q-data.json /show/q-data.json /ask/q-data.json /job/q-data.json /stories/30186326/q-data.json
+hn-datastar      data 189.6 kB + lazy code 14.9 kB, on screen 393 ms, requests: /stories/30186326 /app.css /datastar.js
+hn-datastar-toggles data 206.3 kB + lazy code 14.9 kB, on screen 423 ms, requests: /stories/30186326 /app.css /datastar.js
+hn-datastar-delegated data 189.6 kB + lazy code 14.9 kB, on screen 427 ms, requests: /stories/30186326 /app.css /datastar.js

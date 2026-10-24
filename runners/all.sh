@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 OUT=../results
 (cd .. && pnpm sizes) > $OUT/sizes.md
 node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar > $OUT/hn-script-time.txt
-node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-handler >> $OUT/hn-script-time.txt
+node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-delegated >> $OUT/hn-script-time.txt
 node navigation.mjs 5 > $OUT/hn-navigation.txt
 node lighthouse.mjs hn 15 $OUT/lighthouse-hn > $OUT/lighthouse-hn.txt
 node lighthouse.mjs hn-details 15 $OUT/lighthouse-hn-details > $OUT/lighthouse-hn-details.txt

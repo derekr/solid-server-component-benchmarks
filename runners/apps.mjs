@@ -20,10 +20,10 @@ export const APPS = {
   "hn-next-rsc": { port: 3008, env: HN },
   "hn-qwik": { port: 3010, env: HN },
   // Datastar, one server: <details> (as hn-sc), or a toggle per comment (as
-  // hn-sc-toggles) built from signals or as a single click handler.
+  // hn-sc-toggles) built from signals or as one click handler on the thread.
   "hn-datastar": { port: 3011, env: HN },
   "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
-  "hn-datastar-handler": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "handler" } },
+  "hn-datastar-delegated": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "delegated" } },
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
   "store-datastar": { port: 3015 },

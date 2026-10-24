@@ -10,8 +10,9 @@
 // - TOGGLES=signals: every comment with replies gets a Datastar toggle, a
 //   local signal per comment bound to its label, class and visibility, the
 //   counterpart of hn-sc-toggles' client Toggle (652 on the test story).
-// - TOGGLES=handler: the same toggle as one click handler per comment that
-//   flips a class, with CSS hiding the replies: no signals, one attribute.
+// - TOGGLES=delegated: the same toggle as one click handler on the thread
+//   that flips the clicked toggle's class, with CSS showing the label and
+//   hiding the replies: no signals and no attribute per comment.
 //
 // Responses are compressed the way the other apps' servers do it: pages are
 // streamed through brotli quality 4 and flushed per chunk, so the shell
@@ -22,7 +23,7 @@ import { readFileSync } from "node:fs";
 import { brotliCompressSync, createBrotliCompress, createGzip, constants } from "node:zlib";
 
 const PORT = Number(process.env.PORT || 3011);
-const TOGGLES = process.env.TOGGLES; // undefined, "signals" or "handler"
+const TOGGLES = process.env.TOGGLES; // undefined, "signals" or "delegated"
 const DELAY = Number(process.env.HN_DELAY_MS || 0);
 const dir = new URL(".", import.meta.url).pathname;
 
@@ -119,16 +120,17 @@ function stories(type, page, list) {
 
 // The replies' collapse. With TOGGLES=signals each comment gets a local
 // signal (`_` prefix: never sent to the server) named after its id; with
-// TOGGLES=handler the click flips the `open` class and sets the label, and
-// app.css hides the replies of a closed toggle. The server renders the open
+// TOGGLES=delegated a click on a toggle reaches the one handler on the
+// thread, which flips that toggle's `open` class, and app.css swaps the label
+// and hides the replies of a closed toggle. The server renders the open
 // state, so nothing changes when Datastar binds it.
 function replies(c) {
   const children = c.comments.map(comment).join("");
   if (!TOGGLES)
     return `<details class="toggle" open><summary><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></summary><ul class="comment-children">${children}</ul></details>`;
-  if (TOGGLES === "handler")
+  if (TOGGLES === "delegated")
     return (
-      `<div class="toggle open"><a data-on:click="el.textContent = el.parentElement.classList.toggle('open') ? '[-]' : '[+] comments collapsed'">[-]</a></div>` +
+      `<div class="toggle open"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div>` +
       `<ul class="comment-children">${children}</ul>`
     );
   const s = `$_open${c.id}`;
@@ -143,8 +145,11 @@ function comment(c) {
   return `<li class="comment"><div class="by"><a href="/users/${esc(c.user)}">${esc(c.user)}</a> ${esc(c.time_ago)}</div><div class="text">${c.content ?? ""}</div>${c.comments.length ? replies(c) : ""}</li>`;
 }
 
+// TOGGLES=delegated: every toggle in the thread, nested ones included.
+const DELEGATE = ` data-on:click="evt.target.closest('.toggle')?.classList.toggle('open')"`;
+
 function story(s) {
-  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p><ul class="comment-children">${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
+  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p><ul class="comment-children"${TOGGLES === "delegated" ? DELEGATE : ""}>${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
 }
 
 function user(u) {

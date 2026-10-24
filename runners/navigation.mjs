@@ -7,7 +7,7 @@
 // The Datastar apps are multi-page: the click loads a new document, so the
 // click time is kept in sessionStorage and read back from the new page.
 //
-// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-handler] [cpuRate=1]
+// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-delegated] [cpuRate=1]
 //
 // The feed page reads the live HN API; if that is unreachable the feed shows
 // its error state, but the app is still running and the story itself comes
@@ -16,7 +16,7 @@ import { chromium } from "playwright";
 import { start, stop, url } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 5);
-const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-handler").split(",");
+const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-delegated").split(",");
 const RATE = Number(process.argv[4] || 1);
 const STORY = "/stories/30186326";
 // Code and styles, as opposed to the data the navigation fetched. A

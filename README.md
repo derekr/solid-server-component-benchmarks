@@ -27,7 +27,7 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/hn-next-rsc` | The toggles app on Next.js 16 with React Server Components (`Toggle` is a `"use client"` component), from Ryan's 2024 [next-rsc-hackernews](https://github.com/ryansolid/next-rsc-hackernews). | 3008 |
 | `apps/hn-qwik` | The toggles app on Qwik City 1.20 (resumable: no hydration, handlers load on first use), from Ryan's 2024 [qwik-hn-spa](https://github.com/ryansolid/qwik-hn-spa), with client routing and a `Toggle` component per comment. | 3010 |
 | `apps/hn-datastar` | The HN app on [Datastar](https://data-star.dev) 1.0.4: the same routes, markup and data, rendered on the server as plain HTML and navigated as a multi-page app (no build step). Comment collapse is a native `<details>`, as in `hn-sc`. A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3011 |
-| `apps/hn-datastar` with `TOGGLES` | The toggles app on Datastar: every comment with replies gets a toggle, either a local signal bound to its label, class and visibility (`TOGGLES=signals`, port 3012) or a single click handler that flips a class (`TOGGLES=handler`, port 3016). | 3012, 3016 |
+| `apps/hn-datastar` with `TOGGLES` | The toggles app on Datastar: every comment with replies gets a toggle, either a local signal bound to its label, class and visibility (`TOGGLES=signals`, port 3012) or one click handler on the thread that flips the clicked toggle's class (`TOGGLES=delegated`, port 3016). | 3012, 3016 |
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
 | `apps/store-datastar` | The store on Datastar, rendered on the server as plain HTML. The cart is server state: quick add and add to cart POST, and the server answers with patches for the header's count, the mini-cart and the button. Until the answer lands, an add button says "Adding…". The listing's quick adds and wishlist hearts share one delegated click handler on the grid; the mini-cart's open state and the buy box's colour, size and quantity are signals on the page. | 3015 |
@@ -184,7 +184,7 @@ Every server does its tick's work once for all viewers and compresses each conne
 ```sh
 cd runners && node lighthouse.mjs hn 15 && node lighthouse.mjs hn-details 15 && node lighthouse.mjs store 15
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar
-cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-handler
+cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-delegated
 cd runners && node navigation.mjs 5
 cd runners && node store-add.mjs 7
 ```
@@ -193,19 +193,19 @@ The HN and store pages ported to Datastar (`hn-datastar`, `store-datastar`), mea
 
 What the ports do the same way: same markup and CSS, same data and `HN_DELAY_MS`, same brotli front (pages streamed at quality 4 with the shell flushed first, static files at quality 9). What they do differently, because that is how Datastar apps are built: there is no client router and no build step. Every link is a document load, and the page loads one script, Datastar's 1.0.4 bundle, 12.2 KB brotli (33.6 KB minified; the `pnpm sizes` method). It is the whole library, the same on every page, so it is a fixed cost like the first row of the bundle-size table, not one that grows with the app.
 
-**Hacker News thread, 652 toggles.** Two Datastar versions of the toggle: a local signal per comment bound to the label, class and visibility (`hn-datastar-toggles`, the closest to a Solid component with a signal), and one click handler per comment that flips a class, with CSS hiding the replies (`hn-datastar-handler`).
+**Hacker News thread, 652 toggles.** Two Datastar versions of the toggle: a local signal per comment bound to the label, class and visibility (`hn-datastar-toggles`, the closest to a Solid component with a signal), and one click handler on the whole thread that flips the class of the toggle that was clicked, with CSS swapping the label and hiding the replies (`hn-datastar-delegated`). The second is how a Datastar app would bind a list this size: no attribute per comment.
 
-| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, signals | Datastar, handler |
+| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, signals | Datastar, delegated |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Score | 95 | 83 | 70 | 78 | 71 | 91 |
-| Total Blocking Time | 119 ms | 407 ms | 704 ms | 226 ms | 1,633 ms | 339 ms |
-| FCP | 2.30 s | 2.56 s | 2.27 s | 3.62 s | 1.96 s | 1.80 s |
-| LCP | 2.30 s | 2.60 s | 3.68 s | 3.66 s | 2.03 s | 1.90 s |
-| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 221 kB | 204 kB |
+| Score | 93 | 85 | 70 | 80 | 71 | 91 |
+| Total Blocking Time | 188 ms | 364 ms | 680 ms | 158 ms | 1,578 ms | 332 ms |
+| FCP | 2.26 s | 2.56 s | 2.27 s | 3.62 s | 1.96 s | 1.81 s |
+| LCP | 2.30 s | 2.60 s | 3.65 s | 3.66 s | 2.03 s | 1.93 s |
+| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 221 kB | 205 kB |
 | HTML document | 213 kB | 300 kB | 303 kB | 481 kB | 206 kB | 190 kB |
 | JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | 13 kB | 13 kB |
 
-The signals version runs about as much script as the SC page (real trace at 4x: 521 vs 499 ms), but runs it as one task: Datastar binds all 2,608 attributes (652 signals, each with a class, text, show and click binding) when it starts, and that task is 1.35–1.94 s in Lighthouse's simulation (median 1.48 s), where Solid's largest script task is at most 115 ms. TBT counts nearly all of it. The handler version has one attribute and no signal per comment: script falls to 160 ms and TBT to 339 ms, about the same as the page with no toggles at all (below). So on Datastar a per-element signal has a start-up cost the per-element handler does not, and Datastar binding in chunks that yield to the browser would spread it out the way Solid's hydration is spread out.
+The signals version runs about as much script as the SC page (real trace at 4x: 547 vs 541 ms), but runs it as one task: Datastar binds all 2,608 attributes (652 signals, each with a class, text, show and click binding) when it starts, and that task is 1.30–1.74 s in Lighthouse's simulation (median 1.42 s), where Solid's largest script task has a median of 100 ms. TBT counts nearly all of it. The delegated version has no attribute and no signal per comment, only one on the thread: script falls to 157 ms and TBT to 332 ms, the same as the page with no toggles at all (below). So on Datastar the cost is per binding, and a big list wants one delegated handler rather than a binding per row.
 
 **Hacker News thread with `<details>`.**
 
@@ -215,11 +215,11 @@ The signals version runs about as much script as the SC page (real trace at 4x: 
 | Total Blocking Time | 120 ms | 468 ms | 366 ms |
 | FCP / LCP | 2.11 / 2.13 s | 2.60 / 2.64 s | 1.84 / 1.85 s |
 | Transferred | 241 kB | 338 kB | 205 kB |
-| Script on a cold load, 4x CPU (real trace) | 142 (136–162) ms | 348 (318–380) ms | 162 (154–177) ms |
+| Script on a cold load, 4x CPU (real trace) | 151 (131–161) ms | 357 (343–394) ms | 168 (156–228) ms |
 
 Datastar's script time is close to the SC page's, and its TBT is still three times higher. Most of it is the browser, not Datastar: the Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the parse and layout tasks after it (150–250 ms each in Lighthouse's simulation) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. Datastar's own start-up here (scanning the DOM for attributes) is one task, median 155 ms.
 
-**Client navigation to the thread**, from the click until the thread is on screen (no throttling, 5 runs, medians): Datastar 429 ms (`<details>`), 426 ms (signals), 402 ms (handler), against SC 275, SPA 306, SC with toggles 565 and Qwik City 891 ms. It fetches the same data as the others (190 kB document, 206 kB with signals), but as a new document: the browser parses it as it streams in, while the Solid apps insert their response in one go. The runner disables the HTTP cache, so each Datastar navigation also fetches `datastar.js` and `app.css` again (14.8 kB, counted as code); with the cache on, the `<details>` page landed 60–90 ms sooner in a quick check. Datastar also offers its own in-page navigation (patching the page from a `@get`), which is not measured here.
+**Client navigation to the thread**, from the click until the thread is on screen (no throttling, 5 runs, medians): Datastar 393 ms (`<details>`), 423 ms (signals), 427 ms (delegated), against SC 273, SPA 287, SC with toggles 537 and Qwik City 854 ms. It fetches the same data as the others (190 kB document, 206 kB with signals), but as a new document: the browser parses it as it streams in, while the Solid apps insert their response in one go. The runner disables the HTTP cache, so each Datastar navigation also fetches `datastar.js` and `app.css` again (14.8 kB, counted as code); with the cache on, the `<details>` page landed 60–90 ms sooner in a quick check. Datastar also offers its own in-page navigation (patching the page from a `@get`), which is not measured here.
 
 **Storefront.**
 

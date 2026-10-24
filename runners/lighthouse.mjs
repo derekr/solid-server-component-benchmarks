@@ -16,7 +16,7 @@ import { APPS, start, stop, url } from "./apps.mjs";
 
 const SETS = {
   hn: {
-    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik", "hn-datastar-toggles", "hn-datastar-handler"],
+    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik", "hn-datastar-toggles", "hn-datastar-delegated"],
     pages: { story: "/stories/30186326" }
   },
   "hn-details": {
