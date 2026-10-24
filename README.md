@@ -31,6 +31,7 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/dbmon-solid` | DBMon as a live server component (`broadcast()`): rendered on the server, changed rows streamed to every tab. | 3020 |
 | `apps/dbmon-solid` at `/spa` | The same table rendered in the browser as an SPA: the server streams the rows as data through a `broadcast()` data source and a keyed `For` swaps each changed row (`/spa-store` reconciles into a store instead). | 3023, 3024 |
 | `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4, rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. Two styles: the whole table every tick (port 3021), or only the changed rows (`PATCH=rows`, port 3022). A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3021, 3022 |
+| `apps/dbmon-hypermedia` with `PATCH=replace`, `PATCH=signals` | Datastar's other update styles: the changed rows swapped in without a morph, or the table bound to signals and patched with values (`datastar-patch-signals`). | 3025, 3026 |
 
 Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
@@ -170,6 +171,57 @@ Server CPU ms/s, 400 rows, 10% change, 5 ticks/s, 3 rounds; viewers are HTTP rea
 | Wire per viewer | 13.5–14.6 kB/s | 7.1–7.7 kB/s | 6.4–6.8 kB/s | 9.3–10.1 kB/s |
 
 Every server does its tick's work once for all viewers and compresses each connection separately, so what grows with viewers is compression, and its order here follows how much each stream hands brotli before compressing: the changed rows, Solid's row edits, the SPA's rows as data, the whole table. For the SPA this was checked directly in an earlier batch at brotli quality 5 with a 16 MB window: with compression off, its server cost at 50 viewers fell from 430 to 50 ms/s. Compression settings move these numbers a lot: at that setting the whole-table port's server cost 4–5x more from 50 viewers up, and its wire was about a third smaller.
+
+## Live table: explorations
+
+```sh
+runners/explorations.sh          # all of it, about 5 hours; or one part: method, load, window, backend
+```
+
+This section widens the live-table comparison above. It isn't meant to crown a winner. It asks what the table measures and what it leaves out, and what changes when the table looks more like a real app's: a first load, a window onto a big table, many viewers on one server. Every number here comes from `explorations.sh` on one machine on 2026-10-24: a 4-core Intel Xeon at 2.10 GHz with 15 GB, Node 22.22.0, Go 1.24.7, Chromium 153 (`results/dbmon/machine.txt`). Compare numbers within this section, not with the tables above, which were measured on a different day. Raw results are in `results/dbmon/`.
+
+### The method, and what it shows
+
+```sh
+runners/explorations.sh method
+```
+
+Ryan's Datastar port of the table is a fair one, written the way Datastar's docs suggest, and the comparison above holds up when rerun. What changed is how much the runner can see:
+
+- **Framework and browser time, apart.** "Client busy" counts every main-thread task, and most of that is the browser doing style, layout and paint, which every app pays for the same DOM. `dbmon-client.mjs` now splits a trace into *framework* time (script, HTML parsing and GC, the library's own work) and *browser* time (style, layout and paint). The two don't add up to client busy exactly, because not every task falls into one of them.
+- **A fixed-layout run.** `LAYOUT=fixed` adds `table-layout: fixed`, the usual fix for a big live table, to show how much of the cost is layout.
+- **The final DOM is checked.** At the end of each run the runner pauses the simulation, asks the server for its rows, and compares them with what is on screen. Every run in this section ended with no wrong rows.
+- **Datastar's other styles.** Besides the whole table and the changed rows: the changed rows swapped in without a morph (`PATCH=replace`), and the table bound to signals and patched with values (`PATCH=signals`). Each is an ordinary way to write this in Datastar.
+- **Memory.** The JS heap after a forced GC at the end of the run, and how much it grew during the run.
+- **No stale servers.** The runner refuses to start when something already holds the app's port. One earlier run had measured a leftover server instead of the app.
+- **More rounds near the cliff:** 5 instead of 3.
+
+400 rows, 10% change, 5 ticks/s, 4x CPU, 7 rounds, medians:
+
+| | Solid (`broadcast()`) | Solid SPA | Datastar, whole table | Datastar, changed rows | Datastar, replace | Datastar, signals |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Client busy, ms/s | 561 | 599 | 946 | 742 | 779 | 765 |
+| Framework, ms/s | 126 | 138 | 571 | 265 | 186 | 193 |
+| Browser, ms/s | 433 | 461 | 394 | 486 | 583 | 586 |
+| Fixed layout: client busy / framework | 300 / 102 | 318 / 124 | 731 / 568 | 410 / 225 | 555 / 170 | 397 / 188 |
+| Wire, kB/s | 7.4 | 14.8 | 10.6 | 6.9 | 6.9 | 6.4 |
+| Heap at the end (growth), MB | 2.3 (+0.3) | 7.8 (+1.6) | 1.7 (+0.4) | 1.4 (+0.3) | 1.4 (+0.4) | 11.3 (+0.4) |
+| Server at 100 viewers, ms/s | 194 | 315 | 530 | 168 | 165 | 125 |
+
+What it shows:
+
+- **Most of the client's time is the browser's.** With a fixed layout the browser's share drops to about 205–240 ms/s for every app except replace, and client busy roughly halves. What is left between the apps is the framework's own work.
+- **There, Solid does about half the work of a morph, and that is the honest reason it wins this table.** Solid's compiled updates know which text node changed and write to it (100–125 ms/s). A morph has to find out: Datastar parses each changed row's new markup and compares it with the row on the page (225–265 ms/s for the changed rows). Re-sending the whole table makes the morph walk every row (570 ms/s). This is the case fine-grained reactivity is built for, a few cells changing in a big, stable DOM.
+- **Datastar's other styles move the cost around.** Replace skips the morph (framework 186), but every swapped-in row is a new element, so the browser restyles it (style 133 ms/s in the trace, against about 5 for the others). Signals patch values instead of markup (193), but the page holds a signal for every value on it (11.3 MB of heap), and binding them on load is one long task.
+- **Where each one stops keeping up.** At 800 rows the Datastar changed-rows and signals styles apply 3.7 and 3.5 ticks/s of 5. From 1,000 rows the changed rows froze in 5 of 5 rounds; signals froze in 3 of 5 at 1,000 and 5 of 5 from 1,500. Solid and the SPA kept up to 2,000. That is about 2x the rows, the same ratio as the framework time.
+- **Memory doesn't creep.** No app's heap grew more than 1.6 MB over a run (the SPA, which keeps the rows as data).
+- **On the server**, the changed-rows style costs less than Solid at 100 viewers (168 vs 194 ms/s), because there is less to compress.
+
+### Notes that aren't benchmarks
+
+- **Datastar's morph is pluggable.** The morph is how Datastar applies a patch by default, not a fixed part of it. A faster morph that costs a few more kB is a legitimate trade, and nothing here explores it.
+- **Morphing a whole region is a default, not a rule.** Datastar sends a whole region and morphs it by default because that is simple to reason about: the server renders what the page should look like, and there is no client state to tear. When a region turns out to be hot, you measure and narrow the patch to the parts that change. The changed-rows, replace and signals styles above are that step.
+- **None of these benchmarks are what Datastar is aiming at.** Its claim is to be fast enough for most real workloads, not to win a table re-rendered five times a second in full. 
 
 ## How to read the numbers
 

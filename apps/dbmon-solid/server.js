@@ -67,6 +67,16 @@ function webRequest(req, signal) {
 createServer(async (req, res) => {
   const url = req.url || "/";
 
+  // Runner hooks (see src/server/databases.ts): pause the simulation, read
+  // back what each row should show. Set once the live table's module loads.
+  if (url === "/__dbmon/pause" || url === "/__dbmon/rows") {
+    const dbmon = globalThis.__dbmon;
+    if (!dbmon) return res.writeHead(409).end("no live table yet");
+    if (url === "/__dbmon/pause") return dbmon.pause(), res.writeHead(204).end();
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(dbmon.rows()));
+  }
+
   if (url !== "/" && !url.includes("..")) {
     const file = url.split("?")[0];
     try {

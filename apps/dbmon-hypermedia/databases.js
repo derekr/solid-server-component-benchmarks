@@ -70,10 +70,24 @@ for (let i = 0; i < ROWS; i++) {
 const watchers = new Set();
 let timer;
 
+let paused = false;
+
 function tick() {
+  if (paused) return;
   databases = databases.map(db => (Math.random() < MUTATIONS ? sample(db.id, db.name) : db));
   for (const notify of watchers) notify();
 }
+
+// For the runners: stop the simulation where it is and read back what each
+// row should show (its text, as the page's <tr> textContent), so a run can
+// check that the page ended on the server's state. Servers expose these as
+// /__dbmon/pause and /__dbmon/rows; globalThis because the Solid server's
+// route lives outside the bundle that owns this module.
+const rowText = db => db.name + db.count + db.top5.map(q => q.formatted + q.text).join("");
+globalThis.__dbmon = {
+  pause: () => void (paused = true),
+  rows: () => databases.map(db => ({ id: db.id, text: rowText(db) }))
+};
 
 /** The databases now, then again after every tick, until `signal` aborts. */
 export async function* watchDatabases(signal) {

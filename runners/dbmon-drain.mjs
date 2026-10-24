@@ -3,11 +3,10 @@
 // applying updates it had already received (the backlog). 0 s = keeping up.
 //
 // usage: node dbmon-drain.mjs <app> <rows>
-import { chromium } from "playwright";
-import { start, stop, page as pageUrl } from "./apps.mjs";
+import { start, stop, page as pageUrl, launch } from "./apps.mjs";
 const [name, rows] = process.argv.slice(2);
 const server = await start(name, { DBMON_ROWS: String(rows / 2), DBMON_MUTATIONS: "0.1", DBMON_FPS: "5" });
-const browser = await chromium.launch();
+const browser = await launch();
 let stopped = false;
 try {
   const page = await browser.newPage();
