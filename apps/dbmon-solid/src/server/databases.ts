@@ -104,6 +104,9 @@ const rowText = (db: Database) => db.name + db.count + db.top5.map(q => q.format
   rows: () => databases.map(db => ({ id: db.id, text: rowText(db) }))
 };
 
+/** How many rows the table has (fixed for the server's life). */
+export const rowCount = () => databases.length;
+
 /** The databases now, then again after every tick, until `signal` aborts. */
 export async function* watchDatabases(signal?: AbortSignal): AsyncGenerator<Database[]> {
   let wake: (() => void) | undefined;

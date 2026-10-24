@@ -32,6 +32,9 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/dbmon-solid` at `/spa` | The same table rendered in the browser as an SPA: the server streams the rows as data through a `broadcast()` data source and a keyed `For` swaps each changed row (`/spa-store` reconciles into a store instead). | 3023, 3024 |
 | `apps/dbmon-hypermedia` | The same table on [Datastar](https://data-star.dev) 1.0.4, rendered once per tick on the server and pushed to every client as an SSE patch, morphed by id. Two styles: the whole table every tick (port 3021), or only the changed rows (`PATCH=rows`, port 3022). A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3021, 3022 |
 | `apps/dbmon-hypermedia` with `PATCH=replace`, `PATCH=signals` | Datastar's other update styles: the changed rows swapped in without a morph, or the table bound to signals and patched with values (`datastar-patch-signals`). | 3025, 3026 |
+| `apps/dbmon-hypermedia` with `PATCH=window` | A scrolling window onto the table: the server renders the 40 rows in view and patches them as you scroll (`-overscan` renders 40 more each side, `-delta` sends a scroll as the rows that entered and left). | 3027, 3029, 3030 |
+| `apps/dbmon-solid` at `/spa-window` | The SPA as a virtualized list (TanStack Virtual): every row streamed as data, only the rows in view rendered. | 3028 |
+| `apps/dbmon-solid` at `/sc-window` | The live server component windowed on the server: a `liveQuery` slice per 20-row grid cell. | 3017 |
 
 Notes on fairness:
 - **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
@@ -237,6 +240,48 @@ The article measures first load on the HN and store pages but not on the table. 
 | Transferred | 98 kB | 105 kB | 43 kB | 73 kB |
 
 The whole-table and replace styles load like the changed rows (table at 100 and 79 ms), since their first page is the same. The server-rendered pages show the table almost at once, and the SPA waits for its rows to arrive as data. Most of the difference in bytes is JavaScript: 64 kB for Solid with its router and server-components runtime, 13 kB for the Datastar bundle. The signals page is the outlier. Its HTML carries every value twice, as markup and as a signal, plus a binding attribute for each, and Datastar binds them all in one long task when it starts, which Lighthouse counts as 3.7 s of blocking time. Binding in chunks that yield to the browser, the way Solid spreads out hydration, would be the fix on Datastar's side.
+
+### Windowed tables
+
+```sh
+runners/explorations.sh window
+```
+
+A real app with a big live table doesn't put every row in the DOM. It shows a scrolling window onto the table. There are three windowed versions here, each written the way its stack would usually do it:
+
+- **Solid SPA window** (`/spa-window`): the SPA with TanStack Virtual. It uses `@tanstack/virtual-core` through a small adapter (`src/lib/virtual.ts`), because `@tanstack/solid-virtual` targets Solid 1. Every row still streams to the browser as data, and only the rows on screen render, plus 5 more above and below.
+- **Solid server-component window** (`/sc-window`): the server renders only a slice. Slices are cut on a 20-row grid so that viewers looking at the same place share one `broadcast()` slice. Each slice is a `liveQuery` keyed by its grid cell, so scrolling past a grid line opens a new live connection. A slice renders 80 rows: 20 above the grid line, the 40-row window, and 20 below.
+- **Datastar window** (`PATCH=window`): one SSE stream per tab. A scroll POSTs the new offset (throttled to 32 ms), the server patches the 40 rows now in view, and then it sends that window's changed rows on each tick. `-overscan` renders 40 more rows above and below, the latency mitigation from derekr/largediff. `-delta` sends a scroll as only the rows that entered and left.
+
+One viewer, 10% change, 5 ticks/s, 4x CPU (7 rounds at 400 rows, 3 at 2,000 and 10,000). Each cell is client busy (ms/s), wire (kB/s) and server (ms/s):
+
+| Rows | Solid SPA window | Solid SC window | Datastar window |
+| ---: | --- | --- | --- |
+| 400 | 96 / 14 / 34 | 140 / 1.4 / 25 | 118 / 0.9 / 8 |
+| 2,000 | 165 / 70.9 / 130 | 141 / 1.3 / 28 | 111 / 0.8 / 18 |
+| 10,000 | 484 / 374 / 607 | 146 / 1.3 / 51 | 118 / 0.9 / 29 |
+| Heap at 10,000 rows (growth over the run) | 52 MB (+33) | 1.7 MB (+0.1) | 1.1 MB (+0.1) |
+| First load at 10,000 rows: table on screen | 1,737 ms (1,084 kB of rows) | 106 ms | 60 ms |
+| Server at 100 viewers, 400 rows | 282 ms/s | 76 ms/s | 72 ms/s |
+
+Scrolling, 2,000 rows, behind a round trip added by a local proxy (3 rounds). A *fling* scrolls at 60 px a frame for 3 s; "covered" is the share of frames with no blank rows on screen. A *jump* goes somewhere unseen; the time is until its rows are on the page:
+
+| 4x CPU | Solid SPA window | Solid SC window | Datastar window | Datastar, overscan | Datastar, delta |
+| --- | --- | --- | --- | --- | --- |
+| 70 ms RTT: covered, jump | 99%, 29 ms | 100%, 162 ms | 90%, 125 ms | 100%, 209 ms | 100%, 216 ms |
+| 150 ms RTT: covered, jump | 100%, 27 ms | 58%, 247 ms | 40%, 200 ms | 100%, 297 ms | 100%, 312 ms |
+
+At 1x CPU every app covers 100% of the fling even at 150 ms, and a jump takes 6 ms on the SPA window against 167–187 ms on the server-rendered ones: a round trip plus a little.
+
+What it shows, and why each one does what it does:
+
+- **The SPA window's cost follows the table, not the window.** It renders about 35 rows, but it receives and decodes all of them: at 10,000 rows that is 374 kB/s, 475 ms/s of framework time and a heap that grows 33 MB over the run, and its first load waits for a megabyte of rows. In return, scrolling never waits on the network, so jumps stay local at any latency. That is the right design when the data comfortably fits on the client, and it stops being right somewhere between 2,000 and 10,000 live rows.
+- **The two server-rendered windows cost about the same at rest.** Both send only what is on screen, and their cost barely moves from 400 to 10,000 rows. The SC window's browser time is higher (135 against 78 ms/s), partly because it renders 80 rows to Datastar's 40.
+- **The SC window's jumps cost a new connection.** Crossing a grid line closes one live query and opens another, and the server renders the new slice from scratch. With one viewer that is fine (100% covered at 70 ms). At 150 ms with a throttled CPU the connection set-up falls behind a fling (58%). It is also its weak spot under load (see the backend section). That isn't a fault of server components as such: a `liveQuery` whose arguments can change on an open connection would remove most of it, and it seems worth suggesting upstream.
+- **Datastar's window falls behind a fling on a slow CPU, and overscan fixes it at a price.** The plain 40-row window drops to 90% and 40% covered at 70 and 150 ms on a 4x CPU. With 40 rows of overscan on each side every frame is covered, but each scroll patch now morphs 120 rows on a throttled CPU, so the page paints fewer frames during the fling (47 against 105) and jumps take longer. The delta style doesn't help here: sending fewer rows saves bytes, while the cost is in the patch.
+- **Jump gaps need more than overscan, on every stack.** Overscan covers a fling but not a jump. The comments in `apps/dbmon-hypermedia/server.js` and `src/routes/sc-window.tsx` list the mitigations that apply to both: warm the slice on hover or `pointerdown` before the jump; and for scrollbar drags and the End key, which give no warning, use coarse rows or a client-side index with skeleton rows until the real ones arrive.
+- **Two rc.18 issues**, worked around in `sc-window.tsx` and described there: a reactive `style` value on the spacer rendered live-hole markers inside the attribute, so its height is set once; and scrolling back to the slice the page was served with reopened its key at the position hydration stamped on it (`LIVE_RESUME_FROM`), so the slice never came back. Once the viewer has scrolled away, a flag in the key gives every slice a key hydration never saw.
+- **On simplicity, lightly.** The Datastar window is a range check on the server and a scroll POST. The Solid windows needed an adapter for the virtualizer, and the two workarounds above for the SC window. I wouldn't weigh this much, but it is part of the picture.
 
 ### Notes that aren't benchmarks
 

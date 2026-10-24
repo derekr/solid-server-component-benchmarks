@@ -30,10 +30,25 @@ export const APPS = {
   // values (datastar-patch-signals).
   "dbmon-hypermedia-replace": { dir: "dbmon-hypermedia", port: 3025, stream: "/updates", env: { PATCH: "replace" } },
   "dbmon-hypermedia-signals": { dir: "dbmon-hypermedia", port: 3026, stream: "/updates", env: { PATCH: "signals" } },
+  // A scrolling viewport that shows 40 rows of the table, the way a
+  // hypermedia app would show a big one: the server renders only those.
+  "dbmon-hypermedia-window": { dir: "dbmon-hypermedia", port: 3027, stream: "/updates", env: { PATCH: "window" } },
+  // The window with latency mitigation from derekr/largediff: 40 rows (about
+  // two viewports) rendered above and below what's on screen.
+  "dbmon-hypermedia-window-overscan": { dir: "dbmon-hypermedia", port: 3029, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "40" } },
+  // The same, a scroll sent as only the rows that entered and left.
+  "dbmon-hypermedia-window-delta": { dir: "dbmon-hypermedia", port: 3030, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_SCROLL_PATCH: "delta" } },
   // The Solid app rendered in the browser from streamed JSON: rows swapped
   // per object (`/spa`) or reconciled into a store by id (`/spa-store`).
   "dbmon-spa": { dir: "dbmon-solid", port: 3023, path: "/spa", stream: "/_server/live/getDatabaseData-84a14cde" },
   "dbmon-spa-store": { dir: "dbmon-solid", port: 3024, path: "/spa-store", stream: "/_server/live/getDatabaseData-cc45404a" },
+  // The SPA as a virtualized list (TanStack Virtual): every row streamed as
+  // data, only the rows in the scrolling viewport rendered.
+  "dbmon-spa-window": { dir: "dbmon-solid", port: 3028, path: "/spa-window", stream: "/_server/live/getDatabaseData-355d952c" },
+  // The live server component windowed on the server, like the Datastar
+  // window: a slice per 20-row grid cell, one live connection per cell. The
+  // stream here is the first cell's, which every viewer at the top shares.
+  "dbmon-sc-window": { dir: "dbmon-solid", port: 3017, path: "/sc-window", stream: "/_server/live/getSlice-bfc5e4b9?args=%5B0%2C0%5D" },
 };
 
 export const url = name => `http://localhost:${APPS[name].port}`;
