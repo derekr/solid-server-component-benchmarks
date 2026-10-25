@@ -24,6 +24,10 @@ export const APPS = {
   "hn-datastar": { port: 3011, env: HN },
   "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
   "hn-datastar-delegated": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "delegated" } },
+  // The thread as a hypermedia app would ship it: only the comments around
+  // the viewport, windowed on the server as it scrolls, collapse instant in
+  // CSS. Not like for like with the apps above, which render the whole thread.
+  "hn-datastar-window": { dir: "hn-datastar", port: 3019, env: { ...HN, TOGGLES: "window" } },
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
   "store-datastar": { port: 3015 },
