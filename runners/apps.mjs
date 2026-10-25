@@ -19,14 +19,14 @@ export const APPS = {
   "hn-spa-toggles": { port: 3007, env: HN },
   "hn-next-rsc": { port: 3008, env: HN },
   "hn-qwik": { port: 3010, env: HN },
-  // Datastar, one server: <details> (as hn-sc), or a toggle per comment (as
-  // hn-sc-toggles) built from signals or as one click handler on the thread.
+  // Datastar, one server: the whole thread with <details> (as hn-sc), the
+  // same with content-visibility, a toggle per comment (as hn-sc-toggles)
+  // from one signal and one delegated handler, or a window onto the thread.
   "hn-datastar": { port: 3011, env: HN },
+  "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
   // The <details> page with content-visibility: auto on every top-level
   // thread, so the browser skips rendering the ones off screen.
   "hn-datastar-cv": { dir: "hn-datastar", port: 3009, env: { ...HN, CV: "1" } },
-  "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
-  "hn-datastar-delegated": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "delegated" } },
   // The thread as a hypermedia app would ship it: only the comments around
   // the viewport, windowed on the server as it scrolls, collapse instant in
   // CSS. Not like for like with the apps above, which render the whole thread.

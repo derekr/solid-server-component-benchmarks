@@ -16,11 +16,11 @@ import { APPS, start, stop, url } from "./apps.mjs";
 
 const SETS = {
   hn: {
-    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik", "hn-datastar-toggles", "hn-datastar-delegated"],
+    apps: ["hn-sc-toggles", "hn-spa-toggles", "hn-next-rsc", "hn-qwik", "hn-datastar-toggles", "hn-datastar-window"],
     pages: { story: "/stories/30186326" }
   },
   "hn-details": {
-    apps: ["hn-sc", "hn-spa", "hn-datastar"],
+    apps: ["hn-sc", "hn-spa", "hn-datastar", "hn-datastar-cv"],
     pages: { story: "/stories/30186326" }
   },
   store: {

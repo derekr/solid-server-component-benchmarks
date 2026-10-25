@@ -4,15 +4,17 @@
 // built). No build step; the page loads Datastar 1.0.4 and nothing else.
 //
 // Four variants from one server, like dbmon-hypermedia's PATCH=rows:
-// - default: comment collapse is a native <details>, as in hn-sc and hn-spa.
-//   No Datastar attribute on the page does anything, so Datastar's cost here
-//   is the fixed one: download, parse, and one scan of the DOM.
-// - TOGGLES=signals: every comment with replies gets a Datastar toggle, a
-//   local signal per comment bound to its label, class and visibility, the
-//   counterpart of hn-sc-toggles' client Toggle (652 on the test story).
-// - TOGGLES=delegated: the same toggle as one click handler on the thread
-//   that flips the clicked toggle's class, with CSS showing the label and
-//   hiding the replies: no signals and no attribute per comment.
+// - default: the whole thread in the first load, and comment collapse is a
+//   native <details>, as in hn-sc and hn-spa. No Datastar attribute on the
+//   page does anything, so Datastar's cost here is the fixed one: download,
+//   parse, and one scan of the DOM.
+// - CV=1: the same page with content-visibility (below).
+// - TOGGLES=signals: the whole thread, with a toggle on every comment that
+//   has replies, the counterpart of hn-sc-toggles' client Toggle (652 on the
+//   test story). The state is one signal, the list of collapsed comment ids,
+//   updated by one delegated handler on the thread on pointerdown, and one
+//   <style> turns it into CSS that hides the replies and swaps the label.
+//   No Datastar attribute per comment.
 // - TOGGLES=window: the thread the way a hypermedia app would ship it, not
 //   like for like with the others: the page has only the comments around
 //   the viewport (HN_VIEW, default 10, plus HN_OVERSCAN, default 20, each
@@ -35,7 +37,7 @@ import { readFileSync } from "node:fs";
 import { brotliCompressSync, createBrotliCompress, createGzip, constants } from "node:zlib";
 
 const PORT = Number(process.env.PORT || 3011);
-const TOGGLES = process.env.TOGGLES; // undefined, "signals", "delegated" or "window"
+const TOGGLES = process.env.TOGGLES; // undefined, "signals" or "window"
 const VIEW = Number(process.env.HN_VIEW || 10); // TOGGLES=window: comments for the screen
 const OVERSCAN = Number(process.env.HN_OVERSCAN || 20); // and more on each side
 const DELAY = Number(process.env.HN_DELAY_MS || 0);
@@ -141,40 +143,25 @@ function stories(type, page, list) {
   return h + "</main></div>";
 }
 
-// The replies' collapse, both ways with one click handler on the thread and
-// no Datastar attribute per comment. With TOGGLES=delegated the handler flips
-// the clicked toggle's `open` class, and app.css swaps the label and hides
-// the replies of a closed toggle. With TOGGLES=signals the state is one
-// signal, the list of collapsed comment ids (`_` prefix: never sent to the
-// server), and the page turns it into CSS: one <style> whose text is a rule
-// per collapsed id. The server renders everything open, so nothing changes
-// when Datastar binds it.
-function replies(c) {
-  const children = c.comments.map(comment).join("");
-  if (!TOGGLES)
-    return `<details class="toggle" open><summary><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></summary><ul class="comment-children">${children}</ul></details>`;
-  if (TOGGLES === "delegated")
-    return (
-      `<div class="toggle open"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div>` +
-      `<ul class="comment-children">${children}</ul>`
-    );
-  return (
-    `<div class="toggle open" id="t${c.id}" data-id="${c.id}"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div>` +
-    `<ul class="comment-children">${children}</ul>`
-  );
-}
+// The replies' collapse is the browser's, a <details> open as rendered, or
+// with TOGGLES=signals a toggle the page's one handler and <style> drive
+// (below). The server renders everything open either way.
+const replies = c =>
+  TOGGLES === "signals"
+    ? `<div class="toggle open" id="t${c.id}" data-id="${c.id}"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div><ul class="comment-children">${c.comments.map(comment).join("")}</ul>`
+    : `<details class="toggle" open><summary><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></summary><ul class="comment-children">${c.comments.map(comment).join("")}</ul></details>`;
+
+// TOGGLES=signals: a press on a toggle adds or removes its id in $_closed
+// (`_`: never sent to the server). It acts on pointerdown, not click, so the
+// replies hide or show as the press lands. The <style> hides those replies
+// and shows their "collapsed" label.
+const COLLAPSE =
+  ` data-on:pointerdown="const id = evt.target.closest('.toggle')?.dataset.id; if (id) $_closed = $_closed.includes(id) ? $_closed.filter(x => x !== id) : [...$_closed, id]"`;
+const COLLAPSE_STYLE = `<style data-text="$_closed.map(id => '#t' + id + ' + .comment-children, #t' + id + ' .open-label { display: none } #t' + id + ' .closed-label { display: inline }').join(' ')"></style>`;
 
 function comment(c) {
   return `<li class="comment"><div class="by"><a href="/users/${esc(c.user)}">${esc(c.user)}</a> ${esc(c.time_ago)}</div><div class="text">${c.content ?? ""}</div>${c.comments.length ? replies(c) : ""}</li>`;
 }
-
-// TOGGLES=delegated: every toggle in the thread, nested ones included.
-const DELEGATE = ` data-on:click="evt.target.closest('.toggle')?.classList.toggle('open')"`;
-// TOGGLES=signals: the click adds or removes the toggle's id in $_closed, and
-// the <style> below hides those replies and shows their "collapsed" label.
-const COLLAPSE =
-  ` data-on:click="const id = evt.target.closest('.toggle')?.dataset.id; if (id) $_closed = $_closed.includes(id) ? $_closed.filter(x => x !== id) : [...$_closed, id]"`;
-const COLLAPSE_STYLE = `<style data-text="$_closed.map(id => '#t' + id + ' + .comment-children, #t' + id + ' .open-label { display: none } #t' + id + ' .closed-label { display: inline }').join(' ')"></style>`;
 
 // ---- the windowed thread (TOGGLES=window) ----
 // The tree flattened in reading order, each comment with its depth, its
@@ -246,13 +233,12 @@ const gap = (id, more) => `<li id="${id}" class="gap"${more ? ' style="height:10
 // the viewport (rows hidden by a collapse don't count). A scroll that
 // outruns the rows ends up in a gap with no comment on screen: then it's the
 // comment just past the loaded ones (or just before them, scrolling up), and
-// the post is a jump. With nothing on
-// screen for scroll anchoring to hold, the rows coming and going would move
-// the page under the reader, so a jump's answer ends by scrolling to that
-// comment: where the reader got to.
+// the post is a jump. With nothing on screen for scroll anchoring to hold,
+// the rows coming and going would move the page under the reader, so a
+// jump's answer ends by scrolling to that comment: where the reader got to.
 //
 // Collapse state is the page's alone: one signal, the collapsed ids, turned
-// into CSS by one <style> (as in TOGGLES=signals), so a toggle shows at once.
+// into CSS by one <style>, so a toggle shows at once.
 // The server keeps nothing. Each scroll that changes the top comment
 // (throttled to 32 ms like dbmon's window, plus a last one on scrollend) and
 // each toggle posts the signals: the collapsed ids, the top comment's index
@@ -339,7 +325,7 @@ function signalsOf(json) {
 function story(s) {
   if (TOGGLES === "window")
     return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div>${windowThread(s)}</div>`;
-  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"${TOGGLES === "signals" ? ' data-signals:_closed="[]"' : ""}><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p>${TOGGLES === "signals" ? COLLAPSE_STYLE : ""}<ul class="comment-children"${TOGGLES === "delegated" ? DELEGATE : TOGGLES === "signals" ? COLLAPSE : ""}>${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
+  return `<div class="item-view"><div class="item-view-header"><a href="${esc(s.url)}" target="_blank"><h1>${esc(s.title)}</h1></a>${s.domain ? `<span class="host">(${esc(s.domain)})</span>` : ""}<p class="meta">${esc(s.points)} points | by <a href="/users/${esc(s.user)}">${esc(s.user)}</a> ${esc(s.time_ago)}</p></div><div class="item-view-comments"${TOGGLES === "signals" ? ' data-signals:_closed="[]"' : ""}><p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p>${TOGGLES === "signals" ? COLLAPSE_STYLE : ""}<ul class="comment-children"${TOGGLES === "signals" ? COLLAPSE : ""}>${(s.comments ?? []).map(comment).join("")}</ul></div></div>`;
 }
 
 function user(u) {

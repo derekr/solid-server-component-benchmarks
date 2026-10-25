@@ -1,6 +1,6 @@
 {
   "name": "hn-datastar",
-  "description": "The HN app on Datastar: the same routes, markup and data as the Solid apps, rendered on the server as plain HTML and navigated as a multi-page app. TOGGLES=signals or delegated gives every comment with replies a Datastar toggle; TOGGLES=window keeps only the comments around the viewport, windowed on the server as you scroll. A hand-written port in Datastar's style, not one of Datastar's own demos.",
+  "description": "The HN app on Datastar: the same routes, markup and data as the Solid apps, rendered on the server as plain HTML and navigated as a multi-page app. Comment collapse is a native <details>; CV=1 adds content-visibility, and TOGGLES=window keeps only the comments around the viewport, windowed on the server as you scroll. A hand-written port in Datastar's style, not one of Datastar's own demos.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
