@@ -322,3 +322,10 @@ a {
 .comment .toggle.open > a > .closed-label {
   display: none;
 }
+
+/* hn-datastar's TOGGLES=window: the empty space above and below the loaded
+   comments is never what scroll anchoring holds still, or rows added next to
+   it would land out of view. */
+.comment-children > .gap {
+  overflow-anchor: none;
+}
