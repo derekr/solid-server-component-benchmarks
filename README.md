@@ -500,7 +500,7 @@ Live table, 10% change, 5 ticks/s, one tab, 4x CPU; 400 rows 15 rounds, 1,000 an
 
 The table is one `data-on-signal-patch` on the `<tbody>`, which rewrites the rows each patch touched from `$dbs`. The first version bound every cell (a `data-for` row with `data-text`, `data-attr` and `data-effect` per cell, about 12,000 bindings at 1,000 rows). At 400 rows it took 4.9 s to show the table with the patched Rocket, and it stopped answering at 1,000. Bindings are where Datastar spends: each one is a compiled expression and an effect, and those on `data-text` and `data-attr` also detach and re-attach a MutationObserver around every write. With one binding, the patched build shows 400 rows as fast as the Solid SPA and keeps up at the same client cost, sending less than half the bytes for a third to a half of the server CPU. At 1,000 rows it nearly keeps up (4.3 of 5 ticks/s). At 2,000 rows it stops answering, while Solid keeps up. Stock Rocket now shows 400 rows too, but its startup observer bug (see above) costs 6.9 s, and it stops answering at 1,000.
 
-These are hand-written ports by someone learning Rocket, which is in beta; the Datastar folks will know better idioms, and improvements are welcome.
+Rocket is in beta, so its idioms may still change, and these ports will follow them. They are written as a reference for people learning Datastar.
 
 ## How to read the numbers
 
