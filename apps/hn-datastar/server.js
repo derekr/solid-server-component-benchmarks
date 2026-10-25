@@ -266,19 +266,29 @@ const gap = (id, more) => `<li id="${id}" class="gap"${more ? ' style="height:10
 // server answers as if it were already open (replies that arrive before the
 // click wait hidden by the CSS). The click then only flips the signal; it
 // posts itself for everything else (a collapse's fill, an expand whose
-// replies are loaded, a click with no press before it). The posts share one
-// element, so a newer one cancels an older one still waiting.
+// replies are loaded, a click with no press before it).
+//
+// At most one post is in flight, and none is cancelled: Datastar's default
+// aborts a post when the next one to the same URL starts, and during a
+// steady scroll that left almost no answer to land until the scroll paused.
+// While a post is out ($_busy), a scroll only records the new top comment
+// and a click marks a post pending ($_pending); a press waits for its click.
+// When the answer has landed, one more post goes if the top has moved since
+// ($_sent) or one is pending. Answers so apply in order and never overlap,
+// which the `have`-based patches rely on.
 const HAVE = `$have = [...document.querySelectorAll('#comments > .comment')].map(c => Number(c.dataset.i))`;
-const TOP = `const rows = [...document.querySelectorAll('#comments > .comment')].filter(c => c.offsetHeight); const first = rows.find(c => c.getBoundingClientRect().bottom > 0); let top, jump = true; if (!first) top = Number(rows.at(-1).dataset.i) + 1; else if (first.getBoundingClientRect().top >= innerHeight) top = Number(first.dataset.i) - 1; else { top = Number(first.dataset.i); jump = false } if (top !== $top) { $top = top; $jump = jump; $flip = 0; ${HAVE}; @post(location.pathname) }`;
-const TOGGLE = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id) { $collapsed = $collapsed.includes(id) ? $collapsed.filter(x => x !== id) : [...$collapsed, id]; if ($_pressed !== id) { $flip = 0; ${HAVE}; @post(location.pathname) } $_pressed = 0 }`;
-const PRESS = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id && $collapsed.includes(id) && !document.querySelector('#comments > .u' + id)) { $_pressed = id; $flip = id; ${HAVE}; @post(location.pathname) }`;
+const POST = `$_busy = true; $_pending = false; $_sent = $top; ${HAVE}; @post(location.pathname, {requestCancellation: 'disabled'})`;
+const TOP = `const rows = [...document.querySelectorAll('#comments > .comment')].filter(c => c.offsetHeight); const first = rows.find(c => c.getBoundingClientRect().bottom > 0); let top, jump = true; if (!first) top = Number(rows.at(-1).dataset.i) + 1; else if (first.getBoundingClientRect().top >= innerHeight) top = Number(first.dataset.i) - 1; else { top = Number(first.dataset.i); jump = false } if (top !== $top) { $top = top; $jump = jump; if (!$_busy) { $flip = 0; ${POST} } }`;
+const TOGGLE = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id) { $collapsed = $collapsed.includes(id) ? $collapsed.filter(x => x !== id) : [...$collapsed, id]; if ($_pressed !== id) { if ($_busy) $_pending = true; else { $flip = 0; ${POST} } } $_pressed = 0 }`;
+const PRESS = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id && !$_busy && $collapsed.includes(id) && !document.querySelector('#comments > .u' + id)) { $_pressed = id; $flip = id; ${POST} }`;
+const FINISHED = `if (evt.detail.el === el && evt.detail.type === 'finished') { $_busy = false; if ($_pending || $top !== $_sent) { $flip = 0; ${POST} } }`;
 const COLLAPSED_STYLE = `<style data-text="$collapsed.map(id => '.u' + id + ' { display: none } #c' + id + ' > .toggle > a > .open-label { display: none } #c' + id + ' > .toggle > a > .closed-label { display: inline } #c' + id + ' > .toggle > a { ${CLOSED_LOOK} }').join(' ')"></style>`;
 
 function windowThread(s) {
   const rows = rowsOf(s);
   const start = wanted(rows, new Set(), 0);
   return (
-    `<div class="item-view-comments" data-signals="{collapsed: [], top: 0, jump: false, flip: 0, have: [], _pressed: 0}" data-on:scroll__window__throttle.32ms="${TOP}" data-on:scrollend__window="${TOP}" data-on:pointerdown="${PRESS}" data-on:click="${TOGGLE}">` +
+    `<div class="item-view-comments" data-signals="{collapsed: [], top: 0, jump: false, flip: 0, have: [], _pressed: 0, _busy: false, _pending: false, _sent: 0}" data-on:scroll__window__throttle.32ms="${TOP}" data-on:scrollend__window="${TOP}" data-on:pointerdown="${PRESS}" data-on:click="${TOGGLE}" data-on:datastar-fetch__document="${FINISHED}">` +
     `<p class="item-view-comments-header">${s.comments_count ? s.comments_count + " comments" : "No comments yet."}</p>${COLLAPSED_STYLE}` +
     `<ul class="comment-children" id="comments">${gap("above", start.above)}${start.want.map(i => row(rows, i)).join("")}${gap("below", start.below)}</ul></div>`
   );
@@ -321,9 +331,10 @@ function windowEvents(s, { collapsed, top, jump, flip, have }) {
   }
   flush();
   event += patch("outer", "#above", gap("above", above)) + patch("outer", "#below", gap("below", below));
-  // Below the fixed header (55px).
+  // Below the fixed header (55px), and only if the reader hasn't moved on
+  // since the post went: posts aren't cancelled, so an answer can be stale.
   if (jump)
-    event += patch("append", "body", `<script data-effect="el.remove()">scrollTo(0, document.getElementById('c${rows[at].c.id}').getBoundingClientRect().top + scrollY - 55)</script>`);
+    event += patch("append", "body", `<div data-effect="el.remove(); if ($top === ${Number(top)}) scrollTo(0, document.getElementById('c${rows[at].c.id}').getBoundingClientRect().top + scrollY - 55)"></div>`);
   return event;
 }
 
