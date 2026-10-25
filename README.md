@@ -186,40 +186,42 @@ Every server does its tick's work once for all viewers and compresses each conne
 ```sh
 cd runners && node lighthouse.mjs hn 15 && node lighthouse.mjs hn-details 15 && node lighthouse.mjs store 15
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar,hn-datastar-cv
-cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-window
+cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-window
 cd runners && A=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar && node navigation.mjs 9 $A && NAV=real node navigation.mjs 9 $A
 cd runners && node store-add.mjs 7
 ```
 
-The HN and store pages ported to Datastar (`hn-datastar`, `store-datastar`), measured with the same runners. The point is not a winner: it is what a server-rendered, multi-page hypermedia app costs on the same pages, and where its costs sit. Every app in a set was rerun in the same 15 interleaved rounds, on 2026-10-24 on the machine in `results/dbmon/machine.txt`, so compare within these tables, not with the rerun column above. Raw output is in `results/datastar/`.
+The HN and store pages ported to Datastar (`hn-datastar`, `store-datastar`), measured with the same runners. The point is not a winner: it is what a server-rendered, multi-page hypermedia app costs on the same pages, and where its costs sit. Every app in a set was rerun in the same 15 interleaved rounds, on 2026-10-24 (store) and 2026-10-25 (HN) on the machine in `results/dbmon/machine.txt`, so compare within these tables, not with the rerun column above. Raw output is in `results/datastar/`.
 
 What the ports do the same way: same markup and CSS, same data and `HN_DELAY_MS`, same brotli front (pages streamed at quality 4 with the shell flushed first, static files at quality 9). What they do differently, because that is how Datastar apps are built: there is no client router and no build step. Every link is a document load, and the page loads one script, Datastar's 1.0.4 bundle, 12.2 KB brotli (33.6 KB minified; the `pnpm sizes` method). It is the whole library, the same on every page, so it is a fixed cost like the first row of the bundle-size table, not one that grows with the app.
 
-**Hacker News thread, 652 toggles.** The Datastar pages that sit next to the Solid toggles apps leave the toggles to the platform or keep the page small, the way a Datastar app would build this thread: `hn-datastar` ships the whole thread with a native `<details>` per comment and no signals; `hn-datastar-cv` is the same page with `content-visibility: auto` on every top-level thread, so the browser skips rendering the ones off screen; and `hn-datastar-window` keeps only the comments around the viewport (50 at most), windowed on the server as the page scrolls, with collapse as one signal turned into CSS. The window is not like for like with the other columns, which all render the whole thread: it shows what a hypermedia app would actually send. The Datastar numbers are pending a rerun with these pages.
+**Hacker News thread, 652 toggles.** Two Datastar pages sit next to the Solid toggles apps. `hn-datastar-toggles` is the like-for-like one: the whole thread, a toggle on every comment with replies, and the state in one signal, the list of collapsed comment ids. One delegated handler on the thread updates it on `pointerdown`, so the replies hide as the press lands, and one `<style>` turns the signal into CSS that hides the replies and swaps the label. There is no Datastar attribute per comment. It behaves like the Solid toggle: every toggle starts open as the server rendered it, reads "[-]" or "[+] comments collapsed", and nested toggles work inside open or closed parents. `hn-datastar-window` is how a hypermedia app would actually ship this thread, so it is not like for like with the other columns, which all render the whole thread. The page holds only the comments around the viewport (50 at most). As it scrolls, it posts the top comment, the collapsed ids and the rows it has, and the stateless server patches rows in and out. Collapse is the same one signal turned into CSS, instant, and expanding a thread whose replies were never loaded fetches them on `pointerdown`.
 
-| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, `<details>` | Datastar, content-visibility | Datastar, window |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Score | 94 | 83 | 71 | 80 | pending | pending | pending |
-| Total Blocking Time | 161 ms | 405 ms | 652 ms | 137 ms | pending | pending | pending |
-| FCP | 2.25 s | 2.56 s | 2.27 s | 3.61 s | pending | pending | pending |
-| LCP | 2.25 s | 2.58 s | 3.66 s | 3.62 s | pending | pending | pending |
-| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | pending | pending | pending |
-| HTML document | 213 kB | 300 kB | 303 kB | 481 kB | pending | pending | pending |
-| JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | pending | pending | pending |
+| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, signals | Datastar, window |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Score | 94 | 83 | 69 | 78 | 91 | 100 |
+| Total Blocking Time | 157 ms | 417 ms | 716 ms | 195 ms | 312 ms | 0 ms |
+| FCP | 2.30 s | 2.56 s | 2.28 s | 3.61 s | 1.80 s | 0.90 s |
+| LCP | 2.30 s | 2.62 s | 3.68 s | 3.66 s | 1.91 s | 1.06 s |
+| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 212 kB | 21 kB |
+| HTML document | 213 kB | 300 kB | 303 kB | 481 kB | 196 kB | 6 kB |
+| JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | 13 kB | 13 kB |
+| Script on a cold load, 4x CPU (real trace) | 564 (500–607) ms | 388 (357–433) ms | | | 171 (157–198) ms | 30 (11–38) ms |
 
-An earlier Datastar toggle that gave every comment its own signal and bindings (2,608 in all) spent 1.3–1.7 s binding them in one start-up task, which is why none of these pages binds anything per comment.
+The signals page runs less script than any Solid page (171 against 564 ms for SC), and its TBT is the same as the `<details>` page below, so the toggles cost Datastar almost nothing. What is left is the browser laying out a streamed document (see below). Its trace shows one more cost, not yet explained: about 400 ms of style recalculation at 4x, against about 100 for the Solid toggles pages and about 200 for the `<details>` page. It grows with each layout pass while the document streams in, before Datastar starts, so it is the page's markup or CSS, not the binding. An earlier version gave every comment its own signal and bindings (2,608 in all) and spent 1.3–1.7 s binding them in one start-up task, which is why no page here binds anything per comment. The window does almost no work on load (143 ms of main thread in all at 4x), because there is little page to lay out.
 
-**Hacker News thread with `<details>`.**
+**Hacker News thread with `<details>`.** `hn-datastar` collapses comments with a native `<details>`, as `hn-sc` does, with no signals and no Datastar attribute on the page, so Datastar's cost is the fixed one: download, parse and one scan of the DOM. `hn-datastar-cv` is the same page with `content-visibility: auto` on every top-level thread, so the browser skips laying out and painting the threads that are off screen.
 
 | | Solid SC | Solid SPA | Datastar | Datastar, content-visibility |
 | --- | ---: | ---: | ---: | ---: |
-| Score | 96 | 81 | 90 | pending |
-| Total Blocking Time | 120 ms | 468 ms | 366 ms | pending |
-| FCP / LCP | 2.11 / 2.13 s | 2.60 / 2.64 s | 1.84 / 1.85 s | pending |
-| Transferred | 241 kB | 338 kB | 205 kB | pending |
-| Script on a cold load, 4x CPU (real trace) | 151 (131–161) ms | 357 (343–394) ms | 168 (156–228) ms | pending |
+| Score | 97 | 80 | 91 | 98 |
+| Total Blocking Time | 49 ms | 503 ms | 340 ms | 94 ms |
+| FCP / LCP | 2.15 / 2.15 s | 2.56 / 2.63 s | 1.80 / 1.80 s | 1.80 / 1.80 s |
+| Transferred | 241 kB | 338 kB | 205 kB | 205 kB |
+| Script on a cold load, 4x CPU (real trace) | 137 (124–154) ms | 360 (327–384) ms | 161 (149–168) ms | 160 (148–176) ms |
+| Layout on a cold load, 4x CPU (real trace) | 911 ms | 920 ms | 964 ms | 123 ms |
 
-Datastar's script time is close to the SC page's, and its TBT is still three times higher. Most of it is the browser, not Datastar: the Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the parse and layout tasks after it (150–250 ms each in Lighthouse's simulation) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. Datastar's own start-up here (scanning the DOM for attributes) is one task, median 155 ms.
+Datastar's script time is close to the SC page's, and its TBT is still much higher. Most of it is the browser, not Datastar. The Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the layout tasks after it (100–350 ms each at 4x) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. `content-visibility` takes that layout away: 123 ms against 964, and a TBT of 94 ms. The same rule would help the Solid pages' layout too, but not their TBT, since their layout already lands before first paint (about 130 ms TBT on `hn-sc-toggles` in a quick check). Datastar's own start-up here (scanning the DOM for attributes) is one task of 150–250 ms at 4x, most of it walking the 11,700 elements of the thread. A Datastar change that skips elements with no `data-*` attribute halves it (derekr/datastar `perf/startup-apply`).
 
 **Client navigation to the thread.** Two ways, 9 runs each, medians, no CPU throttling, from pointerdown until the thread is on screen:
 
