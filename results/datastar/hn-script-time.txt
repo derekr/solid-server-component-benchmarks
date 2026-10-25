@@ -1,9 +1,10 @@
 cpu 4x cold, 7 runs, median (min-max) ms
-hn-sc            script 151 (131-161), parseHTML 98 (89-101), compile 4 (3-7), style 147 (137-184), layout 898 (840-1101), paint 26 (23-41), gc 31 (23-75), taskTotal 1555 (1522-1792)
-hn-spa           script 357 (343-394), parseHTML 146 (131-176), compile 36 (31-40), style 148 (134-187), layout 999 (881-1263), paint 27 (20-48), gc 30 (28-65), taskTotal 2002 (1844-2212)
-hn-datastar      script 168 (156-228), parseHTML 134 (124-193), style 159 (149-229), compile 0 (0-2), layout 948 (893-1207), paint 37 (33-40), gc 14 (11-32), taskTotal 1652 (1546-2074)
+hn-sc            script 137 (124-154), parseHTML 93 (88-106), compile 5 (4-5), style 146 (130-159), layout 911 (874-950), paint 21 (17-29), gc 27 (23-33), taskTotal 1522 (1476-1627)
+hn-spa           script 360 (327-384), parseHTML 135 (120-146), compile 37 (35-46), style 155 (140-163), layout 920 (859-962), paint 22 (20-27), gc 28 (26-36), taskTotal 1851 (1765-1977)
+hn-datastar      script 161 (149-168), parseHTML 138 (128-155), style 163 (150-173), compile 0 (0-1), layout 964 (876-983), paint 32 (25-35), gc 12 (9-15), taskTotal 1629 (1522-1662)
+hn-datastar-cv   script 160 (148-176), parseHTML 135 (123-149), style 38 (34-46), compile 0 (0-1), layout 123 (121-173), paint 16 (14-20), gc 11 (10-15), taskTotal 622 (602-711)
 cpu 4x cold, 7 runs, median (min-max) ms
-hn-sc-toggles    script 485 (438-575), parseHTML 93 (79-125), compile 20 (19-23), style 93 (32-163), layout 931 (874-1000), paint 20 (15-24), gc 24 (18-35), taskTotal 1835 (1723-2077)
-hn-spa-toggles   script 392 (346-412), parseHTML 103 (100-149), compile 36 (32-46), style 101 (91-112), layout 882 (753-964), paint 20 (16-38), gc 30 (27-36), taskTotal 1710 (1685-1850)
-hn-datastar-toggles script 193 (163-239), parseHTML 79 (67-87), style 105 (95-122), compile 0 (0-1), layout 948 (912-985), paint 35 (32-38), gc 13 (10-17), taskTotal 1516 (1408-1606)
-hn-datastar-delegated script 156 (146-161), parseHTML 67 (31-75), style 105 (98-120), compile 0 (0-1), layout 1017 (865-1053), paint 33 (23-40), gc 13 (11-16), taskTotal 1537 (1345-1599)
+hn-sc-toggles    script 564 (500-607), parseHTML 87 (81-96), compile 21 (17-29), style 98 (97-148), layout 894 (821-961), paint 23 (15-26), gc 25 (20-29), taskTotal 1901 (1767-2033)
+hn-spa-toggles   script 388 (357-433), parseHTML 114 (110-125), compile 39 (36-43), style 98 (87-137), layout 926 (881-993), paint 22 (22-28), gc 32 (28-36), taskTotal 1816 (1737-1947)
+hn-datastar-toggles script 171 (157-198), parseHTML 82 (78-94), style 404 (348-456), compile 0 (0-1), layout 977 (933-1071), paint 37 (32-49), gc 17 (13-20), taskTotal 1834 (1767-1966)
+hn-datastar-window script 30 (11-38), parseHTML 8 (6-11), style 12 (11-19), compile 0 (0-1), layout 41 (39-51), paint 8 (5-15), taskTotal 143 (137-181)
