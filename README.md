@@ -470,11 +470,12 @@ HN thread, 1,406 comments, Lighthouse mobile, 15 rounds:
 | Transferred | 338 kB | 228 kB | 340 kB | 228 kB |
 | JavaScript | 36.9 kB | 26.6 kB | 37.5 kB | 26.6 kB |
 | Script, cold load, 4x CPU (trace, 7–9 runs) | 475 ms | 571 ms | 480 ms | 494 ms |
-| Client navigation from the feed, on screen | 292 ms | 338 ms | 304 ms | 306 ms |
+| Client navigation from the feed, on screen | 292 ms | 313 ms | 304 ms | 288 ms |
+| The same with cache on, 300 ms hover, 80 ms press (`NAV=real`) | | 253 ms | | 215 ms |
 
 The Datastar columns are from a rerun later the same day, after the thread moved to one string (below); the Solid columns are from the first run.
 
-The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier. Its script is now close to the Solid SPA's (which includes hydration), and layout is the same on both sides (about 900 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both.
+The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier. Its script is now close to the Solid SPA's (which includes hydration), and layout is the same on both sides (about 900 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both. With the pointer resting on the link first, the Datastar SPA has the JSON before the press: as soon as the pointer is over a link to one of its pages, it adds a `<link rel="preload" as="fetch">` for that page's data, the way the multi-page port prerenders from speculation rules, and the click's fetch is served from the preload. That took the real-world navigation from 414 to 253 ms (386 to 215 with toggles); the bare row has no hover, so it doesn't move. `rel="prefetch"` did nothing here: it fills the HTTP cache, which the JSON (sent without caching headers) doesn't stay in, so the click fetched it again.
 
 The thread used to be one `html` call per comment, 1,406 of them, and that cost 1,477 ms of script (1,270 with toggles), a TBT of about 1,900 ms and a score of 71. Each call scans its template's static strings, parses its own markup and clones it, then walks the new nodes to fill in the values, scope them and apply Datastar's attributes; a profile put about half the script in that per-call template work. Caching the scan and the parsed template per call site inside Rocket took about a fifth off. Building the thread as one HTML string in the app (user and time escaped, comment bodies as before) and handing it to Rocket as a single node took it to 571 ms, with byte-identical markup: one parse, and one walk of the 11,700 elements. That's safe because no comment carries a binding. On beta.2 the per-call cost was worse still: 2,007 ms of script, which the two fixes in beta.3 took a quarter to a third off.
 

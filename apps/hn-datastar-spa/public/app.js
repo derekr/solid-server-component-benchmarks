@@ -124,10 +124,27 @@ rocket("hn-app", {
       history.pushState(null, "", a.href);
       load();
     };
+    // The next page's data, fetched on intent with the platform's hint, as the
+    // multi-page port prerenders from speculation rules: as soon as the
+    // pointer is over a link to one of the app's pages, a <link rel="preload">
+    // fetches that page's JSON, and the click's fetch is served from it, as
+    // the shell's preload is on first load. (rel="prefetch" goes to the HTTP
+    // cache, which the uncacheable JSON doesn't stay in, so the click fetched
+    // it again.)
+    const prefetched = new Set();
+    const onOver = e => {
+      const a = e.target.closest?.("a[href]");
+      const route = a && !a.target && a.origin === location.origin && dataUrl(a);
+      if (!route || prefetched.has(route.url)) return;
+      prefetched.add(route.url);
+      document.head.append(Object.assign(document.createElement("link"), { rel: "preload", as: "fetch", href: route.url, crossOrigin: "" }));
+    };
     document.addEventListener("click", onClick);
+    document.addEventListener("pointerover", onOver);
     addEventListener("popstate", load);
     cleanup(() => {
       document.removeEventListener("click", onClick);
+      document.removeEventListener("pointerover", onOver);
       removeEventListener("popstate", load);
     });
     load();
