@@ -20,6 +20,12 @@
 //   signal and CSS, instant; the server keeps no state and never sends a
 //   collapsed comment's replies. See "the windowed thread" below.
 //
+// CV=1, with the default <details> page: every top-level comment (with its
+// replies) gets content-visibility: auto, so the browser skips laying out
+// and painting threads off screen, the platform's answer to a long page.
+// contain-intrinsic-size holds a skipped thread's place at 400px until it
+// has rendered once, then at its last size.
+//
 // Responses are compressed the way the other apps' servers do it: pages are
 // streamed through brotli quality 4 and flushed per chunk, so the shell
 // (head, nav) leaves before the data is ready; static assets are compressed
@@ -33,6 +39,7 @@ const TOGGLES = process.env.TOGGLES; // undefined, "signals", "delegated" or "wi
 const VIEW = Number(process.env.HN_VIEW || 10); // TOGGLES=window: comments for the screen
 const OVERSCAN = Number(process.env.HN_OVERSCAN || 20); // and more on each side
 const DELAY = Number(process.env.HN_DELAY_MS || 0);
+const CV = process.env.CV === "1";
 const dir = new URL(".", import.meta.url).pathname;
 
 // The same capture the Solid apps serve (30186326, 1,406 comments), read from
@@ -103,7 +110,7 @@ const head = title => `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <link rel="stylesheet" href="/app.css">
-<script type="module" src="/datastar.js"></script>
+${CV ? "<style>.item-view-comments > .comment-children > .comment { content-visibility: auto; contain-intrinsic-size: auto 400px; }</style>\n" : ""}<script type="module" src="/datastar.js"></script>
 <script type="speculationrules">{"prefetch": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}], "prerender": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}]}</script>
 </head>
 <body>`;
@@ -425,5 +432,5 @@ createServer(async (req, res) => {
   }
   out.end();
 }).listen(PORT, () => {
-  console.log(`HackerNews (Datastar${TOGGLES ? `, ${TOGGLES} toggles` : ""}) on http://localhost:${PORT}`);
+  console.log(`HackerNews (Datastar${TOGGLES ? `, ${TOGGLES} toggles` : ""}${CV ? ", content-visibility" : ""}) on http://localhost:${PORT}`);
 });

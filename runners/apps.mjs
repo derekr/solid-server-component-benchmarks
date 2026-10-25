@@ -22,6 +22,9 @@ export const APPS = {
   // Datastar, one server: <details> (as hn-sc), or a toggle per comment (as
   // hn-sc-toggles) built from signals or as one click handler on the thread.
   "hn-datastar": { port: 3011, env: HN },
+  // The <details> page with content-visibility: auto on every top-level
+  // thread, so the browser skips rendering the ones off screen.
+  "hn-datastar-cv": { dir: "hn-datastar", port: 3009, env: { ...HN, CV: "1" } },
   "hn-datastar-toggles": { dir: "hn-datastar", port: 3012, env: { ...HN, TOGGLES: "signals" } },
   "hn-datastar-delegated": { dir: "hn-datastar", port: 3016, env: { ...HN, TOGGLES: "delegated" } },
   // The thread as a hypermedia app would ship it: only the comments around
