@@ -199,38 +199,38 @@ What the ports do the same way: same markup and CSS, same data and `HN_DELAY_MS`
 
 | | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, signals | Datastar, window |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Score | 94 | 83 | 69 | 78 | 91 | 100 |
-| Total Blocking Time | 157 ms | 417 ms | 716 ms | 195 ms | 312 ms | 0 ms |
-| FCP | 2.30 s | 2.56 s | 2.28 s | 3.61 s | 1.80 s | 0.90 s |
-| LCP | 2.30 s | 2.62 s | 3.68 s | 3.66 s | 1.91 s | 1.06 s |
-| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 212 kB | 21 kB |
+| Score | 95 | 83 | 69 | 79 | 90 | 100 |
+| Total Blocking Time | 108 ms | 413 ms | 728 ms | 179 ms | 364 ms | 0 ms |
+| FCP | 2.26 s | 2.56 s | 2.28 s | 3.61 s | 1.80 s | 0.94 s |
+| LCP | 2.26 s | 2.59 s | 3.70 s | 3.65 s | 1.88 s | 0.95 s |
+| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 212 kB | 22 kB |
 | HTML document | 213 kB | 300 kB | 303 kB | 481 kB | 196 kB | 6 kB |
 | JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | 13 kB | 13 kB |
-| Script on a cold load, 4x CPU (real trace) | 564 (500–607) ms | 388 (357–433) ms | | | 171 (157–198) ms | 30 (11–38) ms |
+| Script on a cold load, 4x CPU (real trace) | 525 (501–562) ms | 354 (331–381) ms | | | 176 (164–216) ms | 30 (27–39) ms |
 
-The signals page runs less script than any Solid page (171 against 564 ms for SC), and its TBT is the same as the `<details>` page below, so the toggles cost Datastar almost nothing. What is left is the browser laying out a streamed document (see below). Its trace shows one more cost, not yet explained: about 400 ms of style recalculation at 4x, against about 100 for the Solid toggles pages and about 200 for the `<details>` page. It grows with each layout pass while the document streams in, before Datastar starts, so it is the page's markup or CSS, not the binding. An earlier version gave every comment its own signal and bindings (2,608 in all) and spent 1.3–1.7 s binding them in one start-up task, which is why no page here binds anything per comment. The window does almost no work on load (143 ms of main thread in all at 4x), because there is little page to lay out.
+The signals page runs less script than any Solid page (176 against 525 ms for SC), and its TBT is close to the `<details>` page below, so the toggles cost Datastar almost nothing. What is left is the browser laying out a streamed document (see below). Its style recalculation was about 400 ms at 4x until the speculation rules were scoped: with `href_matches: "/*"` alone, Chrome matches the rules against every link on the 1,400-comment page while it streams in (401 ms of style with them, 107 without). The rules now match only the header and feed links (`selector_matches: ".header a, .news-list a"`), which keeps the navigation prefetch below and brings style to 159 ms (`<details>` page: 372 before, 223 now, 156 with no rules). An earlier version gave every comment its own signal and bindings (2,608 in all) and spent 1.3–1.7 s binding them in one start-up task, which is why no page here binds anything per comment. The window does almost no work on load (143 ms of main thread in all at 4x), because there is little page to lay out. Its scroll posts keep one request in flight and never cancel one (Datastar's default cancels the previous post to the same URL, which during a steady scroll left almost no answer to land), and the server answers them from the story it just rendered instead of waiting `HN_DELAY_MS` again. With 100 ms of emulated latency and a steady 4,000 px/s scroll, no frame shows an empty viewport.
 
 **Hacker News thread with `<details>`.** `hn-datastar` collapses comments with a native `<details>`, as `hn-sc` does, with no signals and no Datastar attribute on the page, so Datastar's cost is the fixed one: download, parse and one scan of the DOM. `hn-datastar-cv` is the same page with `content-visibility: auto` on every top-level thread, so the browser skips laying out and painting the threads that are off screen.
 
 | | Solid SC | Solid SPA | Datastar | Datastar, content-visibility |
 | --- | ---: | ---: | ---: | ---: |
-| Score | 97 | 80 | 91 | 98 |
-| Total Blocking Time | 49 ms | 503 ms | 340 ms | 94 ms |
-| FCP / LCP | 2.15 / 2.15 s | 2.56 / 2.63 s | 1.80 / 1.80 s | 1.80 / 1.80 s |
+| Score | 96 | 81 | 89 | 98 |
+| Total Blocking Time | 72 ms | 481 ms | 410 ms | 92 ms |
+| FCP / LCP | 2.11 / 2.15 s | 2.56 / 2.63 s | 1.80 / 1.85 s | 1.80 / 1.80 s |
 | Transferred | 241 kB | 338 kB | 205 kB | 205 kB |
-| Script on a cold load, 4x CPU (real trace) | 137 (124–154) ms | 360 (327–384) ms | 161 (149–168) ms | 160 (148–176) ms |
-| Layout on a cold load, 4x CPU (real trace) | 911 ms | 920 ms | 964 ms | 123 ms |
+| Script on a cold load, 4x CPU (real trace) | 158 (141–169) ms | 371 (339–491) ms | 162 (159–174) ms | 187 (164–216) ms |
+| Layout on a cold load, 4x CPU (real trace) | 936 ms | 926 ms | 956 ms | 127 ms |
 
-Datastar's script time is close to the SC page's, and its TBT is still much higher. Most of it is the browser, not Datastar. The Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the layout tasks after it (100–350 ms each at 4x) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. `content-visibility` takes that layout away: 123 ms against 964, and a TBT of 94 ms. The same rule would help the Solid pages' layout too, but not their TBT, since their layout already lands before first paint (about 130 ms TBT on `hn-sc-toggles` in a quick check). Datastar's own start-up here (scanning the DOM for attributes) is one task of 150–250 ms at 4x, most of it walking the 11,700 elements of the thread. A Datastar change that skips elements with no `data-*` attribute halves it (derekr/datastar `perf/startup-apply`).
+Datastar's script time is close to the SC page's, and its TBT is still much higher. Most of it is the browser, not Datastar. The Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the layout tasks after it (100–350 ms each at 4x) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. `content-visibility` takes that layout away: 127 ms against 956, and a TBT of 92 ms. The same rule would help the Solid pages' layout too, but not their TBT, since their layout already lands before first paint (about 130 ms TBT on `hn-sc-toggles` in a quick check). Datastar's own start-up here (scanning the DOM for attributes) is one task of 150–250 ms at 4x, most of it walking the 11,700 elements of the thread. A Datastar change that skips elements with no `data-*` attribute halves it (derekr/datastar `perf/startup-apply`).
 
 **Client navigation to the thread.** Two ways, 9 runs each, medians, no CPU throttling, from pointerdown until the thread is on screen:
 
 | | Solid SC | Solid SPA | SC, toggles | SPA, toggles | Qwik City | Datastar |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Real-world: cache on, 300 ms hover, 80 ms press (`NAV=real`) | 363 ms | 427 ms | 640 ms | 406 ms | 883 ms | 445 ms |
-| Bare: cache off, scripted click, no speculation rules | 263 ms | 298 ms | 530 ms | 294 ms | 840 ms | 424 ms |
+| Real-world: cache on, 300 ms hover, 80 ms press (`NAV=real`) | 372 ms | 431 ms | 621 ms | 423 ms | 925 ms | 409 ms |
+| Bare: cache off, scripted click, no speculation rules | 277 ms | 293 ms | 566 ms | 290 ms | 871 ms | 440 ms |
 
-The real-world row is the one to read. A person rests the pointer on a link before pressing it and holds the press for a moment, and the browser has the script and stylesheet from the page before. Each app gets the mitigation it would use in production. The Datastar pages carry speculation rules that prefetch a same-origin link after about 200 ms of hover (moderate eagerness), so the document is already there when the press lands, and the header's nav-bar links navigate on `pointerdown`. The Solid router and Qwik City preload on hover as they normally do. The 80 ms press is in every app's time, which is why every app is slower on that row. With the network out of the way, what is left for Datastar is the browser parsing and laying out a new 190 kB document, while the Solid apps insert their response into the page they have. The rules also ask for a prerender, which would do that work before the press too, but Chrome turns prerendering off under automation (`PrerenderingDisabledByDevTools`), so it isn't measured. In a real browser the Datastar navigation would be faster than this row shows.
+The real-world row is the one to read. A person rests the pointer on a link before pressing it and holds the press for a moment, and the browser has the script and stylesheet from the page before. Each app gets the mitigation it would use in production. The Datastar pages carry speculation rules that prefetch a header or feed link after about 200 ms of hover (moderate eagerness), so the document is already there when the press lands, and the header's nav-bar links navigate on `pointerdown`. The Solid router and Qwik City preload on hover as they normally do. The 80 ms press is in every app's time, which is why every app is slower on that row. With the network out of the way, what is left for Datastar is the browser parsing and laying out a new 190 kB document, while the Solid apps insert their response into the page they have. The rules also ask for a prerender, which would do that work before the press too, but Chrome turns prerendering off under automation (`PrerenderingDisabledByDevTools`), so it isn't measured. In a real browser the Datastar navigation would be faster than this row shows.
 
 The bare row is what the article's runner measured: the cache off, a scripted click with no hover, and the page's speculation rules taken out. It is fine as a like-for-like check, but it isn't a real-world benchmark for a multi-page app, which leans on exactly what it turns off. Datastar also offers its own in-page navigation (patching the page from a `@get`), which neither row measures. A fresh document per page is deliberate in a hypermedia app: no client state is carried from route to route, so nothing accumulates in memory across a session, and each page starts from a clean profile.
 
