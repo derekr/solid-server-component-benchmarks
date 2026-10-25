@@ -1,0 +1,10 @@
+{
+  "name": "dbmon-go",
+  "description": "The Datastar DBMon port (apps/dbmon-hypermedia) in Go on the Datastar Go SDK: same page, events, styles and runner hooks. Needs Go 1.24+ and, for DBMON_BROTLI_IMPL=cbrotli, libbrotli headers.",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "go build -o dbmon-go .",
+    "start": "./dbmon-go"
+  }
+}

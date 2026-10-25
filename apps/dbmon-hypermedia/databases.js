@@ -70,10 +70,30 @@ for (let i = 0; i < ROWS; i++) {
 const watchers = new Set();
 let timer;
 
+let paused = false;
+// When each tick happened (epoch ms, the last 5,000), for dbmon-busy.mjs.
+const ticks = [];
+
 function tick() {
+  if (paused) return;
+  ticks.push(Date.now());
+  if (ticks.length > 5000) ticks.shift();
   databases = databases.map(db => (Math.random() < MUTATIONS ? sample(db.id, db.name) : db));
   for (const notify of watchers) notify();
 }
+
+// For the runners: stop the simulation where it is and read back what each
+// row should show (its text, as the page's <tr> textContent), so a run can
+// check that the page ended on the server's state. Servers expose these as
+// /__dbmon/pause and /__dbmon/rows (and /__dbmon/ticks, when each tick
+// happened); globalThis because the Solid server's
+// route lives outside the bundle that owns this module.
+const rowText = db => db.name + db.count + db.top5.map(q => q.formatted + q.text).join("");
+globalThis.__dbmon = {
+  pause: () => void (paused = true),
+  rows: () => databases.map(db => ({ id: db.id, text: rowText(db) })),
+  ticks: () => ticks
+};
 
 /** The databases now, then again after every tick, until `signal` aborts. */
 export async function* watchDatabases(signal) {

@@ -41,8 +41,14 @@ async function one(browser, base) {
   });
   if (NAV) {
     await page.evaluate(s => { const a = document.createElement("a"); a.href = s; document.body.append(a); a.click(); }, STORY);
-    await page.waitForFunction(() => document.querySelectorAll(".comment").length > 1000, null, { timeout: 60000 });
-  } else await page.goto(base + STORY, { waitUntil: "load" });
+    // The whole thread, or hn-datastar-window's first window.
+    await page.waitForFunction(() => document.querySelectorAll(".comment").length > 1000 || document.querySelector("#comments > #below"), null, { timeout: 60000 });
+  } else {
+    await page.goto(base + STORY, { waitUntil: "load" });
+    // A client-rendered page (hn-datastar-spa) fetches and renders the
+    // thread after load; server-rendered pages already have it.
+    await page.waitForFunction(() => document.querySelectorAll(".comment").length > 1000 || document.querySelector("#comments > #below"), null, { timeout: 60000 });
+  }
   await page.waitForTimeout(2500);
   await cdp.send("Tracing.end");
   await done;

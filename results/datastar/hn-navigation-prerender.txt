@@ -1,0 +1,12 @@
+navigation to the story without DevTools, cpu 1x, 9 runs, medians, cache on, 300 ms hover and an 80 ms press
+hn-sc served                 on screen 407 ms, prerendered 0/9, runs: 407 592 482 468 386 382 409 361 395
+hn-spa served                on screen 436 ms, prerendered 0/9, runs: 433 456 463 475 420 421 479 436 359
+hn-datastar prefetch         on screen 242 ms, prerendered 0/9, runs: 282 247 221 253 223 249 222 242 239
+hn-datastar moderate         on screen 346 ms, prerendered 9/9, runs: 354 500 370 313 346 360 335 315 302
+hn-datastar served           on screen 121 ms, prerendered 9/9, runs: 213 121 112 115 111 215 114 144 176
+hn-datastar-cv prefetch      on screen 171 ms, prerendered 0/9, runs: 173 158 164 171 343 176 183 168 164
+hn-datastar-cv moderate      on screen 130 ms, prerendered 9/9, runs: 120 168 151 128 135 129 130 138 125
+hn-datastar-cv served        on screen 115 ms, prerendered 9/9, runs: 115 114 115 123 120 113 114 119 121
+hn-datastar-toggles prefetch on screen 345 ms, prerendered 0/9, runs: 280 323 320 347 409 356 342 355 345
+hn-datastar-toggles moderate on screen 330 ms, prerendered 9/9, runs: 347 330 319 304 305 370 306 361 343
+hn-datastar-toggles served   on screen 114 ms, prerendered 9/9, runs: 123 114 215 175 112 111 114 124 113

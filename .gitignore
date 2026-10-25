@@ -2,3 +2,5 @@ node_modules
 dist
 *.log
 results/lighthouse-*/*-[0-9]*.json
+results/dbmon/lighthouse/*-[0-9]*.json
+apps/dbmon-go/dbmon-go

@@ -46,4 +46,4 @@ async function once(name, n) {
 
 for (let r = 1; r <= +rounds; r++)
   for (const n of list.split(",").map(Number))
-    for (const name of process.env.APPS ? process.env.APPS.split(",") : ["dbmon-solid", "dbmon-spa", "dbmon-hypermedia", "dbmon-hypermedia-rows"]) console.log(JSON.stringify({ round: r, ...(await once(name, n)) }));
+    for (const name of process.env.APPS ? process.env.APPS.split(",") : ["dbmon-solid", "dbmon-spa", "dbmon-hypermedia", "dbmon-hypermedia-rows", "dbmon-hypermedia-replace", "dbmon-hypermedia-signals"]) console.log(JSON.stringify({ round: r, ...(await once(name, n)) }));
