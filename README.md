@@ -444,7 +444,7 @@ The live-table comparisons above use Datastar the way it is meant to be used: th
 
 | App | What it is | Port |
 | --- | --- | ---: |
-| `apps/hn-datastar-spa` | The HN SPA. One `<hn-app>` Rocket component renders the feed, thread and user pages from `/api` JSON with `html` templates; the thread uses `<details>`, and `TOGGLES=1` gives each comment with replies a `[-]` toggle instead (`hn-datastar-spa-toggles`): one delegated `data-on:click` on the thread flips the clicked toggle's class, and CSS swaps the label and hides the replies. There is no signal or binding per comment. | 3060, 3061 |
+| `apps/hn-datastar-spa` | The HN SPA. One `<hn-app>` Rocket component renders the feed, thread and user pages from `/api` JSON with `html` templates, the comment thread as one HTML string; the thread uses `<details>`, and `TOGGLES=1` gives each comment with replies a `[-]` toggle instead (`hn-datastar-spa-toggles`): one delegated `data-on:click` on the thread flips the clicked toggle's class, and CSS swaps the label and hides the replies. There is no signal or binding per comment. | 3060, 3061 |
 | `apps/store-datastar-spa` | The store. The header and mega-menu are static in the shell; `$cart` is a global signal, and the buy box is a Rocket component with local signals. Quick add, on every tile, has no signal or binding of its own: one delegated `data-on:click` on the grid adds to `$cart` and sets the clicked button's class and label. | 3066 |
 | `apps/dbmon-datastar-spa` | The live table, the counterpart of `dbmon-solid`'s `/spa`: the server streams `$dbs` as `datastar-patch-signals` (every row on connect, then only the changed rows, merged by index), and one `data-on-signal-patch` on the table marks the rows each patch touched, which are written once per frame by setting their text nodes' `data`. There is no binding per row or cell. | 3064 |
 
@@ -464,15 +464,23 @@ HN thread, 1,406 comments, Lighthouse mobile, 15 rounds:
 
 | | Solid SPA | Datastar SPA | Solid SPA, toggles | Datastar SPA, toggles |
 | --- | ---: | ---: | ---: | ---: |
-| Score | 82 | 71 | 85 | 71 |
-| TBT | 444 ms | 1,957 ms | 334 ms | 1,780 ms |
+| Score | 82 | 86 | 85 | 87 |
+| TBT | 444 ms | 479 ms | 334 ms | 475 ms |
 | FCP / LCP | 2.60 / 2.64 s | 1.10 / 2.25 s | 2.61 / 2.61 s | 1.10 / 2.25 s |
 | Transferred | 338 kB | 228 kB | 340 kB | 228 kB |
-| JavaScript | 36.9 kB | 26.3 kB | 37.5 kB | 26.3 kB |
-| Script, cold load, 4x CPU (trace, 7 runs) | 475 ms | 1,477 ms | 480 ms | 1,270 ms |
-| Client navigation from the feed, on screen | 292 ms | 489 ms | 304 ms | 430 ms |
+| JavaScript | 36.9 kB | 26.6 kB | 37.5 kB | 26.6 kB |
+| Script, cold load, 4x CPU (trace, 7–9 runs) | 475 ms | 571 ms | 480 ms | 494 ms |
+| Client navigation from the feed, on screen | 292 ms | 338 ms | 304 ms | 306 ms |
 
-The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier, but rendering the thread in the browser costs about three times the Solid SPA's script (which includes hydration), all in one long task. Layout is the same on both sides (about 900 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both; the difference is render time. On beta.2 the thread's TBT was 2,565 ms in the same Lighthouse run and its script 2,007 ms in an earlier one; beta.3's fixes take about a quarter to a third off. The toggles first had a signal per comment with a class, text, show and click binding each, which cost about 300 ms more script than `<details>`. With one delegated click flipping a class and CSS doing the rest, they cost less than `<details>`. What's left is the thread itself: 1,406 comments built from `html` templates in one task.
+The Datastar columns are from a rerun later the same day, after the thread moved to one string (below); the Solid columns are from the first run.
+
+The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier. Its script is now close to the Solid SPA's (which includes hydration), and layout is the same on both sides (about 900 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both.
+
+The thread used to be one `html` call per comment, 1,406 of them, and that cost 1,477 ms of script (1,270 with toggles), a TBT of about 1,900 ms and a score of 71. Each call scans its template's static strings, parses its own markup and clones it, then walks the new nodes to fill in the values, scope them and apply Datastar's attributes; a profile put about half the script in that per-call template work. Caching the scan and the parsed template per call site inside Rocket took about a fifth off. Building the thread as one HTML string in the app (user and time escaped, comment bodies as before) and handing it to Rocket as a single node took it to 571 ms, with byte-identical markup: one parse, and one walk of the 11,700 elements. That's safe because no comment carries a binding. On beta.2 the per-call cost was worse still: 2,007 ms of script, which the two fixes in beta.3 took a quarter to a third off.
+
+The toggles first had a signal per comment with a class, text, show and click binding each, which cost about 300 ms more script than `<details>`. With one delegated click flipping a class and CSS doing the rest, they cost less than `<details>`.
+
+The general rule on Datastar: a big list with no bindings of its own is cheapest as one string. `html` templates are for the parts that bind.
 
 Store, Lighthouse mobile, 15 rounds:
 

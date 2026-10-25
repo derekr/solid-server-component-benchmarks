@@ -1,6 +1,7 @@
 // The whole client: one Rocket component, <hn-app>, that fetches a page's
-// JSON once and renders it with Rocket's `html` templates, the same markup
-// ../hn-spa renders with Solid. Datastar is not in charge of the data here:
+// JSON once and renders it with Rocket's `html` templates (the comment thread
+// as one HTML string, see `comment`), the same markup ../hn-spa renders with
+// Solid. Datastar is not in charge of the data here:
 // the JSON stays a plain object handed to `render`, as Solid's `query` hands
 // its result to the components. There are no signals at all: the comment
 // toggles (TOGGLES=1) are a class flipped by one delegated click handler.
@@ -34,21 +35,28 @@ const raw = (tag, cls, html) => {
   return el;
 };
 
-function comment(html, c) {
-  return html`<li class="comment"><div class="by"><a href="/users/${c.user ?? ""}">${c.user}</a> ${c.time_ago}</div>${raw("div", "text", c.content ?? "")}${
-    c.comments.length ? (TOGGLES ? toggle(html, c) : details(html, c)) : null
-  }</li>`;
-}
+// The thread is built as one HTML string and parsed once, then handed to
+// Rocket as a single node. One `html` call per comment (1,406 here) made
+// Rocket scan, parse and walk each comment's markup on its own, about 2.4x
+// the script of this. It's safe because no comment carries a binding: the
+// toggles are one delegated click (see story). User and time are escaped;
+// comment bodies are HN's HTML, as before.
+const esc = v => String(v ?? "").replace(/[&<>"']/g, ch => `&#${ch.charCodeAt(0)};`);
 
-const details = (html, c) =>
-  html`<details class="toggle" open><summary><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></summary><ul class="comment-children">${c.comments.map(k => comment(html, k))}</ul></details>`;
+const comment = c =>
+  `<li class="comment"><div class="by"><a href="/users/${esc(c.user)}">${esc(c.user)}</a> ${esc(c.time_ago)}</div><div class="text">${c.content ?? ""}</div>${
+    c.comments.length ? (TOGGLES ? toggle(c) : details(c)) : ""
+  }</li>`;
+
+const details = c =>
+  `<details class="toggle" open><summary><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></summary><ul class="comment-children">${c.comments.map(comment).join("")}</ul></details>`;
 
 // The toggle with no signal and no binding per comment: one data-on:click
 // on the thread (see story) flips the `open` class of the toggle clicked,
 // and app.css swaps the label and hides a closed toggle's replies. Its markup
 // is the Solid toggle's (div.toggle.open > a), with the two labels as spans.
-const toggle = (html, c) =>
-  html`<div class="toggle open"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div><ul class="comment-children">${c.comments.map(k => comment(html, k))}</ul>`;
+const toggle = c =>
+  `<div class="toggle open"><a><span class="open-label">[-]</span><span class="closed-label">[+] comments collapsed</span></a></div><ul class="comment-children">${c.comments.map(comment).join("")}</ul>`;
 
 // Every toggle in the thread, nested ones included. Harmless without
 // toggles: no .toggle > a to find.
@@ -59,7 +67,7 @@ function story(html, s) {
     s.domain ? html`<span class="host">(${s.domain})</span>` : null
   }<p class="meta">${s.points} points | by <a href="/users/${s.user}">${s.user}</a> ${s.time_ago}</p></div><div class="item-view-comments" data-on:click="${onToggle}"><p class="item-view-comments-header">${
     s.comments_count ? s.comments_count + " comments" : "No comments yet."
-  }</p><ul class="comment-children">${s.comments.map(c => comment(html, c))}</ul></div></div>`;
+  }</p>${raw("ul", "comment-children", s.comments.map(comment).join(""))}</div></div>`;
 }
 
 function storyItem(html, s) {
