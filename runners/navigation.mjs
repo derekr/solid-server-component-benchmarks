@@ -15,7 +15,7 @@
 // speculation rules, and the Solid router and Qwik City preload on hover as
 // they do. Timed from pointerdown either way.
 //
-// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-delegated] [cpuRate=1]
+// usage: node navigation.mjs [runs=5] [apps=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-cv,hn-datastar-toggles,hn-datastar-window] [cpuRate=1]
 //
 // The feed page reads the live HN API; if that is unreachable the feed shows
 // its error state, but the app is still running and the story itself comes
@@ -24,7 +24,7 @@ import { chromium } from "playwright";
 import { start, stop, url } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 5);
-const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-toggles,hn-datastar-delegated").split(",");
+const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-cv,hn-datastar-toggles,hn-datastar-window").split(",");
 const RATE = Number(process.argv[4] || 1);
 const REAL = process.env.NAV === "real";
 const HOVER_MS = Number(process.env.HOVER_MS || 300);
@@ -86,7 +86,9 @@ async function once(browser, base) {
   const painted = await (
     await page.waitForFunction(
       () =>
-        document.querySelectorAll(".comment").length > 1000 &&
+        // The whole thread, or hn-datastar-window's first window (its gap
+        // below the rows comes after them).
+        (document.querySelectorAll(".comment").length > 1000 || document.querySelector("#comments > #below")) &&
         performance.timeOrigin + performance.now() - Number(sessionStorage.__t0),
       null,
       { polling: "raf", timeout: 60000 }

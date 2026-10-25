@@ -315,10 +315,8 @@ a {
   text-decoration: underline;
 }
 
-/* hn-datastar's TOGGLES=delegated: a closed toggle shows its other label
-   and hides its replies. */
-.comment .toggle:not(.open) + .comment-children,
-.comment .toggle:not(.open) > a > .open-label,
+/* hn-datastar's TOGGLES=signals and TOGGLES=window: a toggle reads "[-]"
+   until the page's collapsed-ids <style> swaps its label. */
 .comment .toggle.open > a > .closed-label {
   display: none;
 }

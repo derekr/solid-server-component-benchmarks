@@ -28,7 +28,7 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/hn-qwik` | The toggles app on Qwik City 1.20 (resumable: no hydration, handlers load on first use), from Ryan's 2024 [qwik-hn-spa](https://github.com/ryansolid/qwik-hn-spa), with client routing and a `Toggle` component per comment. | 3010 |
 | `apps/hn-datastar` | The HN app on [Datastar](https://data-star.dev) 1.0.4: the same routes, markup and data, rendered on the server as plain HTML and navigated as a multi-page app (no build step). Comment collapse is a native `<details>`, as in `hn-sc`. A hand-written port in Datastar's style, not one of Datastar's own demos; improvements welcome. | 3011 |
 | `apps/hn-datastar` with `CV=1` | The `<details>` page with `content-visibility: auto` (and `contain-intrinsic-size: auto 400px`) on every top-level thread: the whole thread still ships in the first load, and the browser skips laying out and painting the threads off screen. | 3009 |
-| `apps/hn-datastar` with `TOGGLES` | The toggles app on Datastar: every comment with replies gets a toggle, with one click handler on the thread and CSS doing the rest: the state either in one signal, the list of collapsed ids (`TOGGLES=signals`, port 3012), or in each toggle's class (`TOGGLES=delegated`, port 3016). | 3012, 3016 |
+| `apps/hn-datastar` with `TOGGLES=signals` | The toggles app on Datastar, the counterpart of `hn-sc-toggles`: the whole thread, a toggle on every comment with replies, and the state in one signal, the list of collapsed ids. One delegated handler on the thread updates it on `pointerdown`, and one `<style>` turns it into CSS that hides the replies and swaps the label. No Datastar attribute per comment. | 3012 |
 | `apps/hn-datastar` with `TOGGLES=window` | The thread the way a hypermedia app would ship it, not like for like with the apps above: a flat list of comments indented by depth, windowed on the server by comment count. The page holds only the comments around the viewport (10 plus 20 each side, 50 at most) and, as the top comment changes, posts its signals (the collapsed ids, the top comment, the rows it has); the server keeps no state and answers with patches adding and removing rows. Collapse is one signal turned into CSS, so it shows at once; the server then fills the window, never sending collapsed replies. Scroll anchoring holds the view still as rows come and go; the scrollbar spans the loaded rows, not the whole thread. | 3019 |
 | `apps/store-sc` | A small storefront with server components: listing (48 tiles, quick add on each) and product page (gallery, buy box, 12 reviews). Only the cart, quick add and buy box hydrate. | 3013 |
 | `apps/store-spa` | The same store as a server-rendered, hydrating SPA. | 3014 |
@@ -185,8 +185,8 @@ Every server does its tick's work once for all viewers and compresses each conne
 
 ```sh
 cd runners && node lighthouse.mjs hn 15 && node lighthouse.mjs hn-details 15 && node lighthouse.mjs store 15
-cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar
-cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-delegated
+cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar,hn-datastar-cv
+cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-window
 cd runners && A=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar && node navigation.mjs 9 $A && NAV=real node navigation.mjs 9 $A
 cd runners && node store-add.mjs 7
 ```
@@ -195,29 +195,29 @@ The HN and store pages ported to Datastar (`hn-datastar`, `store-datastar`), mea
 
 What the ports do the same way: same markup and CSS, same data and `HN_DELAY_MS`, same brotli front (pages streamed at quality 4 with the shell flushed first, static files at quality 9). What they do differently, because that is how Datastar apps are built: there is no client router and no build step. Every link is a document load, and the page loads one script, Datastar's 1.0.4 bundle, 12.2 KB brotli (33.6 KB minified; the `pnpm sizes` method). It is the whole library, the same on every page, so it is a fixed cost like the first row of the bundle-size table, not one that grows with the app.
 
-**Hacker News thread, 652 toggles.** Two Datastar versions of the toggle, both written the way a Datastar app would bind a list this size, with no attribute per comment. `hn-datastar-delegated` has one click handler on the whole thread that flips the class of the toggle that was clicked, and CSS swaps the label and hides the replies. `hn-datastar-toggles` keeps the state in a signal: one signal for the whole thread, the list of collapsed comment ids, which the same delegated click updates. The page turns it into CSS through one `<style>` whose text is a rule per collapsed id, so CSS again hides the replies and swaps the label (no `data-show` or `data-text` per comment). Both behave exactly like the Solid toggle: every toggle starts open as the server rendered it, reads "[-]" or "[+] comments collapsed", and nested toggles work inside open or closed parents.
+**Hacker News thread, 652 toggles.** The Datastar pages that sit next to the Solid toggles apps leave the toggles to the platform or keep the page small, the way a Datastar app would build this thread: `hn-datastar` ships the whole thread with a native `<details>` per comment and no signals; `hn-datastar-cv` is the same page with `content-visibility: auto` on every top-level thread, so the browser skips rendering the ones off screen; and `hn-datastar-window` keeps only the comments around the viewport (50 at most), windowed on the server as the page scrolls, with collapse as one signal turned into CSS. The window is not like for like with the other columns, which all render the whole thread: it shows what a hypermedia app would actually send. The Datastar numbers are pending a rerun with these pages.
 
-| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, signals | Datastar, delegated |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Score | 94 | 83 | 71 | 80 | 90 | 90 |
-| Total Blocking Time | 161 ms | 405 ms | 652 ms | 137 ms | 357 ms | 368 ms |
-| FCP | 2.25 s | 2.56 s | 2.27 s | 3.61 s | 1.80 s | 1.80 s |
-| LCP | 2.25 s | 2.58 s | 3.66 s | 3.62 s | 1.90 s | 1.90 s |
-| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | 211 kB | 205 kB |
-| HTML document | 213 kB | 300 kB | 303 kB | 481 kB | 196 kB | 190 kB |
-| JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | 13 kB | 13 kB |
+| | Solid SC | Solid SPA | Next RSC | Qwik City | Datastar, `<details>` | Datastar, content-visibility | Datastar, window |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Score | 94 | 83 | 71 | 80 | pending | pending | pending |
+| Total Blocking Time | 161 ms | 405 ms | 652 ms | 137 ms | pending | pending | pending |
+| FCP | 2.25 s | 2.56 s | 2.27 s | 3.61 s | pending | pending | pending |
+| LCP | 2.25 s | 2.58 s | 3.66 s | 3.62 s | pending | pending | pending |
+| Transferred | 263 kB | 340 kB | 470 kB | 529 kB | pending | pending | pending |
+| HTML document | 213 kB | 300 kB | 303 kB | 481 kB | pending | pending | pending |
+| JavaScript | 47 kB | 38 kB | 131 kB | 43 kB | pending | pending | pending |
 
-Both Datastar versions do one start-up task of about 150 ms (median of the longest script task: 159 ms with the signal, 148 delegated, against 86 for Solid's), and run less script than the SC page (real trace at 4x: 193 and 156 ms against 485). Their TBT is the same as the page with no toggles at all (below), so on Datastar the toggles themselves cost almost nothing. Most of what is left is the browser laying out a streamed document, as on the `<details>` page. An earlier version of `hn-datastar-toggles` gave every comment its own signal, with a class, text, show and click binding each: 2,608 bindings, bound in one 1.3–1.7 s task, for a TBT of 1,578 ms and a score of 71. That is not how Datastar is meant to be used. A Datastar page keeps few signals and little client state, puts in a signal only the state that matters (here, which comments are collapsed), and leaves the rest to the platform: one delegated listener, and CSS for what follows from the state.
+An earlier Datastar toggle that gave every comment its own signal and bindings (2,608 in all) spent 1.3–1.7 s binding them in one start-up task, which is why none of these pages binds anything per comment.
 
 **Hacker News thread with `<details>`.**
 
-| | Solid SC | Solid SPA | Datastar |
-| --- | ---: | ---: | ---: |
-| Score | 96 | 81 | 90 |
-| Total Blocking Time | 120 ms | 468 ms | 366 ms |
-| FCP / LCP | 2.11 / 2.13 s | 2.60 / 2.64 s | 1.84 / 1.85 s |
-| Transferred | 241 kB | 338 kB | 205 kB |
-| Script on a cold load, 4x CPU (real trace) | 151 (131–161) ms | 357 (343–394) ms | 168 (156–228) ms |
+| | Solid SC | Solid SPA | Datastar | Datastar, content-visibility |
+| --- | ---: | ---: | ---: | ---: |
+| Score | 96 | 81 | 90 | pending |
+| Total Blocking Time | 120 ms | 468 ms | 366 ms | pending |
+| FCP / LCP | 2.11 / 2.13 s | 2.60 / 2.64 s | 1.84 / 1.85 s | pending |
+| Transferred | 241 kB | 338 kB | 205 kB | pending |
+| Script on a cold load, 4x CPU (real trace) | 151 (131–161) ms | 357 (343–394) ms | 168 (156–228) ms | pending |
 
 Datastar's script time is close to the SC page's, and its TBT is still three times higher. Most of it is the browser, not Datastar: the Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the parse and layout tasks after it (150–250 ms each in Lighthouse's simulation) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. Datastar's own start-up here (scanning the DOM for attributes) is one task, median 155 ms.
 
