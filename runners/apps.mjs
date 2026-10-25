@@ -34,6 +34,17 @@ export const APPS = {
   "store-sc": { port: 3013 },
   "store-spa": { port: 3014 },
   "store-datastar": { port: 3015 },
+  // The store as a Datastar SPA (Rocket), stock and patched.
+  "store-datastar-spa": { port: 3066 },
+  "store-datastar-spa-patched": { dir: "store-datastar-spa", port: 3067, env: { ROCKET: "patched" } },
+  // The SPAs on Datastar + Rocket: a static shell, JSON from /api, every page
+  // rendered in the browser by a Rocket component. TOGGLES=1 is the
+  // counterpart of hn-spa-toggles (one delegated click flips a class per toggle).
+  "hn-datastar-spa": { port: 3060, env: HN },
+  "hn-datastar-spa-toggles": { dir: "hn-datastar-spa", port: 3061, env: { ...HN, TOGGLES: "1" } },
+  // The same two on a Rocket build with two performance changes (ROCKET=patched).
+  "hn-datastar-spa-patched": { dir: "hn-datastar-spa", port: 3062, env: { ...HN, ROCKET: "patched" } },
+  "hn-datastar-spa-toggles-patched": { dir: "hn-datastar-spa", port: 3063, env: { ...HN, TOGGLES: "1", ROCKET: "patched" } },
   "dbmon-solid": { port: 3020, stream: "/_server/live/getDatabases-9c9967e7" },
   // The Datastar port in its two styles: the whole table re-sent and morphed
   // every tick, or only the changed rows, each morphed by id (PATCH=rows).
@@ -58,6 +69,10 @@ export const APPS = {
   // The Solid app rendered in the browser from streamed JSON: rows swapped
   // per object (`/spa`) or reconciled into a store by id (`/spa-store`).
   "dbmon-spa": { dir: "dbmon-solid", port: 3023, path: "/spa", stream: "/_server/live/getDatabaseData-84a14cde" },
+  // The table as a Datastar SPA (Rocket): signal patches over SSE, rendered
+  // in the browser by one data-on-signal-patch on the table.
+  "dbmon-datastar-spa": { port: 3064, stream: "/updates" },
+  "dbmon-datastar-spa-patched": { dir: "dbmon-datastar-spa", port: 3065, stream: "/updates", env: { ROCKET: "patched" } },
   "dbmon-spa-store": { dir: "dbmon-solid", port: 3024, path: "/spa-store", stream: "/_server/live/getDatabaseData-cc45404a" },
   // The SPA as a virtualized list (TanStack Virtual): every row streamed as
   // data, only the rows in the scrolling viewport rendered.

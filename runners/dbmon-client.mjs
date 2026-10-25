@@ -46,13 +46,17 @@ async function once(name) {
     const ping = ms =>
       Promise.race([page.evaluate(() => document.querySelectorAll("td.dbname").length), new Promise(r => setTimeout(() => r(-1), ms))]);
     const froze = () => ({ ...out, froze: true, frozeAfterSec: +((Date.now() - tLoad) / 1000).toFixed(1) });
+    // The first table may take a while on a client-rendered page (a
+    // Datastar SPA renders the whole table in one task), so the wait for it
+    // allows 30 s; firstTableSec says when it showed.
     for (let rows = 0; rows <= 0; ) {
-      if (Date.now() - tLoad > 15000) return { ...out, noTable: true };
-      rows = await ping(5000);
+      if (Date.now() - tLoad > 30000) return { ...out, noTable: true };
+      rows = await ping(30000);
       if (rows === -1) return froze();
       if (!rows) await page.waitForTimeout(200);
     }
     if (process.env.LAYOUT === "fixed") await page.addStyleTag({ content: "table { table-layout: fixed }" });
+    out.firstTableSec = +((Date.now() - tLoad) / 1000).toFixed(1);
     await page.waitForTimeout(1500);
     if ((await ping(5000)) === -1) return froze();
     await page.evaluate(() => {

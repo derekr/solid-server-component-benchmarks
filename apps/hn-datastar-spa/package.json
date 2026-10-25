@@ -1,0 +1,11 @@
+{
+  "name": "hn-datastar-spa",
+  "description": "The Hacker News SPA on Datastar with Rocket: the server sends a static shell and JSON, and a Rocket component renders every page in the browser. TOGGLES=1 gives each comment with replies a client signal instead of <details>.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo nothing to build",
+    "start": "node server.js"
+  }
+}

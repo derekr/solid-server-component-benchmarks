@@ -1,0 +1,11 @@
+{
+  "name": "dbmon-datastar-spa",
+  "description": "The DBMon table as a Datastar SPA with Rocket: the server streams the rows as signal patches (JSON) and a Rocket component renders the table in the browser with <template data-for>. The counterpart of dbmon-solid's /spa.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo nothing to build",
+    "start": "node server.js"
+  }
+}

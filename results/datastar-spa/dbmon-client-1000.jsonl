@@ -1,0 +1,9 @@
+{"round":1,"app":"dbmon-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.3,"appliedPerSec":5.3,"clientBusyMsPerSec":982,"serverCpuMsPerSec":75,"wireKBPerSec":38}
+{"round":1,"app":"dbmon-datastar-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"froze":true,"frozeAfterSec":30.3}
+{"round":1,"app":"dbmon-datastar-spa-patched","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.6,"appliedPerSec":4.5,"clientBusyMsPerSec":950,"serverCpuMsPerSec":17,"wireKBPerSec":14.9}
+{"round":2,"app":"dbmon-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.1,"appliedPerSec":5.1,"clientBusyMsPerSec":945,"serverCpuMsPerSec":65,"wireKBPerSec":35.1}
+{"round":2,"app":"dbmon-datastar-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"froze":true,"frozeAfterSec":30.3}
+{"round":2,"app":"dbmon-datastar-spa-patched","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.7,"appliedPerSec":4.3,"clientBusyMsPerSec":944,"serverCpuMsPerSec":16,"wireKBPerSec":15.6}
+{"round":3,"app":"dbmon-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.5,"appliedPerSec":5.1,"clientBusyMsPerSec":949,"serverCpuMsPerSec":65,"wireKBPerSec":35.2}
+{"round":3,"app":"dbmon-datastar-spa","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"froze":true,"frozeAfterSec":30.3}
+{"round":3,"app":"dbmon-datastar-spa-patched","rows":1000,"change":0.1,"ticksPerSec":5,"cpuRate":4,"firstTableSec":1.7,"appliedPerSec":3.4,"clientBusyMsPerSec":963,"serverCpuMsPerSec":11,"wireKBPerSec":15.7}

@@ -1,0 +1,7 @@
+client navigation to the story, cpu 1x, 5 runs, medians
+hn-spa           data 199 kB + lazy code 0 kB, on screen 296 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
+hn-datastar-spa  data 198.9 kB + lazy code 0 kB, on screen 584 ms, requests: /api/story/30186326
+hn-datastar-spa-patched data 198.9 kB + lazy code 0 kB, on screen 414 ms, requests: /api/story/30186326
+hn-spa-toggles   data 199 kB + lazy code 0 kB, on screen 287 ms, requests: /_server/data/getStory-2e3a937a?args=%5B%2230186326%22%5D
+hn-datastar-spa-toggles data 198.9 kB + lazy code 0 kB, on screen 498 ms, requests: /api/story/30186326
+hn-datastar-spa-toggles-patched data 198.9 kB + lazy code 0 kB, on screen 399 ms, requests: /api/story/30186326

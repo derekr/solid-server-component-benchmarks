@@ -5,6 +5,7 @@
 // usage: node lighthouse.mjs <set> [rounds=15] [outDir=results/<set>]
 //   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City, Datastar), hn-details (story page, <details>), store (listing + product),
 //         dbmon (the live table at 400 rows: Solid SC, Solid SPA, Datastar changed rows and signals)
+//         spa-hn (story page; Solid SPA and Datastar SPA, <details> and toggles), spa-store (the store, Solid SPA and Datastar SPA)
 //
 // Prints one JSON line per run and a median table at the end; the raw
 // Lighthouse reports land in outDir.
@@ -22,6 +23,18 @@ const SETS = {
   "hn-details": {
     apps: ["hn-sc", "hn-spa", "hn-datastar", "hn-datastar-cv"],
     pages: { story: "/stories/30186326" }
+  },
+  // The Solid SPAs beside their Datastar + Rocket counterparts.
+  "spa-hn": {
+    apps: [
+      "hn-spa", "hn-datastar-spa", "hn-datastar-spa-patched",
+      "hn-spa-toggles", "hn-datastar-spa-toggles", "hn-datastar-spa-toggles-patched"
+    ],
+    pages: { story: "/stories/30186326" }
+  },
+  "spa-store": {
+    apps: ["store-spa", "store-datastar-spa", "store-datastar-spa-patched"],
+    pages: { listing: "/", product: "/product/1" }
   },
   store: {
     apps: ["store-sc", "store-spa", "store-datastar"],

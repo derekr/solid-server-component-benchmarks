@@ -1,0 +1,11 @@
+{
+  "name": "store-datastar-spa",
+  "description": "The store as a Datastar SPA with Rocket: a static shell and JSON, rendered in the browser; the cart is a global signal, quick add and the buy box are Rocket components with local signals. The counterpart of store-spa.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo nothing to build",
+    "start": "node server.js"
+  }
+}
