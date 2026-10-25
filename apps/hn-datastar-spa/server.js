@@ -3,7 +3,7 @@
 // which a Rocket component (public/app.js) renders in the browser. It is the
 // client-rendered counterpart of ../hn-spa: same routes, markup, CSS and data
 // (the cached story behind the same HN_DELAY_MS), with Datastar 1.0.4 + Rocket
-// beta.2 in place of Solid.
+// beta.3 in place of Solid.
 //
 // TOGGLES=1 is the counterpart of ../hn-spa-toggles: each comment with replies
 // gets a [-] link instead of a native <details>, handled by one delegated
@@ -26,16 +26,9 @@ const DELAY = Number(process.env.HN_DELAY_MS || 0);
 const cachedStory = readFileSync(path.resolve(root, "../hn-spa/src/server/story-30186326.json"), "utf8");
 const CACHED_ID = String(JSON.parse(cachedStory).id);
 
-// ROCKET=patched serves a Rocket build with two performance changes (see
-// README): composed children are inserted after their parent template is
-// scoped, so nested templates are not walked again at every level; and the
-// pending-host observer walks the nodes a mutation added, not the whole
-// subtree of their parent.
-const ROCKET = process.env.ROCKET === "patched" ? "datastar-rocket-patched.js" : "datastar-rocket.js";
-
 const MIME = { ".js": "application/javascript", ".css": "text/css" };
 const statics = {};
-for (const [url, file] of [["app.js", "app.js"], ["app.css", "app.css"], ["datastar-rocket.js", ROCKET]]) {
+for (const [url, file] of [["app.js", "app.js"], ["app.css", "app.css"], ["datastar-rocket.js", "datastar-rocket.js"]]) {
   const body = readFileSync(path.resolve(root, "public", file));
   statics["/" + url] = {
     type: MIME[path.extname(file)],
@@ -131,5 +124,5 @@ createServer(async (req, res) => {
   if (req.method === "HEAD") return res.writeHead(200).end();
   send(req, res, 200, "text/html; charset=utf-8", shell(dataFor(url.pathname, url.searchParams)));
 }).listen(PORT, () => {
-  console.log(`HackerNews (Datastar SPA${TOGGLES ? ", toggles" : ""}, ${ROCKET}) on http://localhost:${PORT}`);
+  console.log(`HackerNews (Datastar SPA${TOGGLES ? ", toggles" : ""}) on http://localhost:${PORT}`);
 });

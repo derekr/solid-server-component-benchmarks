@@ -27,13 +27,13 @@ const SETS = {
   // The Solid SPAs beside their Datastar + Rocket counterparts.
   "spa-hn": {
     apps: [
-      "hn-spa", "hn-datastar-spa", "hn-datastar-spa-patched",
-      "hn-spa-toggles", "hn-datastar-spa-toggles", "hn-datastar-spa-toggles-patched"
+      "hn-spa", "hn-datastar-spa",
+      "hn-spa-toggles", "hn-datastar-spa-toggles"
     ],
     pages: { story: "/stories/30186326" }
   },
   "spa-store": {
-    apps: ["store-spa", "store-datastar-spa", "store-datastar-spa-patched"],
+    apps: ["store-spa", "store-datastar-spa"],
     pages: { listing: "/", product: "/product/1" }
   },
   store: {

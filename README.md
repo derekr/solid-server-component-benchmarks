@@ -440,7 +440,7 @@ One viewer in the browser doesn't see the backend at all. Client busy is the sam
 
 ## Datastar as an SPA (Rocket)
 
-The live-table comparisons above use Datastar the way it is meant to be used: the server renders and the browser morphs. These apps ask the other question: what if Datastar powers the SPA itself, with no server rendering after the first byte? Plain Datastar can't build a list from JSON in the browser, so they use [Rocket](https://data-star.dev/reference/rocket), Datastar's web-component layer (MIT, in Datastar's repo, `datastar-rocket.js`: "v1.0.4 + Rocket beta.2", 21 KB brotli against 12 KB for core). Each one is a static shell plus JSON, rendered in the browser by Rocket components with the same markup, CSS and data as its Solid SPA twin. There's no router: a click on one of the app's own links pushes the URL, fetches that page's JSON and renders it.
+The live-table comparisons above use Datastar the way it is meant to be used: the server renders and the browser morphs. These apps ask the other question: what if Datastar powers the SPA itself, with no server rendering after the first byte? Plain Datastar can't build a list from JSON in the browser, so they use [Rocket](https://data-star.dev/reference/rocket), Datastar's web-component layer (MIT, in Datastar's repo, `datastar-rocket.js`: "v1.0.4 + Rocket beta.3", 22 KB brotli against 12 KB for core). Each one is a static shell plus JSON, rendered in the browser by Rocket components with the same markup, CSS and data as its Solid SPA twin. There's no router: a click on one of the app's own links pushes the URL, fetches that page's JSON and renders it.
 
 | App | What it is | Port |
 | --- | --- | ---: |
@@ -448,72 +448,72 @@ The live-table comparisons above use Datastar the way it is meant to be used: th
 | `apps/store-datastar-spa` | The store. The header and mega-menu are static in the shell; `$cart` is a global signal, and the buy box is a Rocket component with local signals. Quick add, on every tile, has no signal or binding of its own: one delegated `data-on:click` on the grid adds to `$cart` and sets the clicked button's class and label. | 3066 |
 | `apps/dbmon-datastar-spa` | The live table, the counterpart of `dbmon-solid`'s `/spa`: the server streams `$dbs` as `datastar-patch-signals` (every row on connect, then only the changed rows, merged by index), and one `data-on-signal-patch` on the table marks the rows each patch touched, which are written once per frame by setting their text nodes' `data`. There is no binding per row or cell. | 3064 |
 
-Each also runs with `ROCKET=patched` (`-patched` in `runners/apps.mjs`, ports 3062, 3063, 3065, 3067): a Rocket build with two small performance changes found while profiling these apps, in `apps/hn-datastar-spa/rocket.patch`, measured on their own in [derekr/datastar `rocket-perf-nested-templates-and-observer`](https://github.com/derekr/datastar/tree/rocket-perf-nested-templates-and-observer/bench/rocket-perf). (1) A `html` template inserts the templates composed into it after it scopes its own `data-*` attributes, instead of before, so each nested template's elements are walked once rather than once per level of nesting (the HN thread is 14 levels deep). (2) The observer that guards not-yet-upgraded Rocket hosts walks the nodes a mutation added, not the whole subtree of their parent again for every added row; with `data-for` stamping 400 rows into a `<tbody>`, that re-walk was quadratic. Both are offered as suggestions to Datastar, not as how Rocket must be used.
+These run on Rocket beta.3. It fixes two performance problems found while profiling these apps on beta.2, which they used to run on beside a patched copy (`ROCKET=patched`), measured on their own in [derekr/datastar `rocket-perf-nested-templates-and-observer`](https://github.com/derekr/datastar/tree/rocket-perf-nested-templates-and-observer/bench/rocket-perf). (1) A `html` template no longer walks the templates composed into it again, so each nested template's elements are walked once rather than once per level of nesting (the HN thread is 14 levels deep). (2) The observer that guards not-yet-upgraded Rocket hosts walks the nodes a mutation added, not the whole subtree of their parent again for every added row; with `data-for` stamping 400 rows into a `<tbody>`, that re-walk was quadratic. Beta.3 measured the same as that patched build within run-to-run noise on every table below.
 
 ```sh
 cd runners && node lighthouse.mjs spa-hn 15 && node lighthouse.mjs spa-store 15
-cd runners && node script-time.mjs 4 cold 7 hn-spa,hn-datastar-spa,hn-datastar-spa-patched,hn-spa-toggles,hn-datastar-spa-toggles,hn-datastar-spa-toggles-patched
-cd runners && node navigation.mjs 5 hn-spa,hn-datastar-spa,hn-datastar-spa-patched,hn-spa-toggles,hn-datastar-spa-toggles,hn-datastar-spa-toggles-patched
-cd runners && APPS=dbmon-spa,dbmon-datastar-spa,dbmon-datastar-spa-patched node dbmon-client.mjs 400 0.1 5 4 5   # and 1000, 2000 with 3 rounds
-cd runners && APPS=dbmon-spa,dbmon-datastar-spa-patched node dbmon-viewers.mjs 1,10,25,50,100 3
+cd runners && node script-time.mjs 4 cold 7 hn-spa,hn-datastar-spa,hn-spa-toggles,hn-datastar-spa-toggles
+cd runners && node navigation.mjs 5 hn-spa,hn-datastar-spa,hn-spa-toggles,hn-datastar-spa-toggles
+cd runners && APPS=dbmon-spa,dbmon-datastar-spa node dbmon-client.mjs 400 0.1 5 4 5   # and 1000, 2000 with 3 rounds
+cd runners && APPS=dbmon-spa,dbmon-datastar-spa node dbmon-viewers.mjs 1,10,25,50,100 3
 ```
 
-Run 2026-10-25 in a 4-core Linux container, interleaved, medians (DBMon server CPU across viewers is from 2026-10-24; the server didn't change). This container ran Lighthouse slower than the article's reruns above (the Solid SPA's TBT on the thread is 337 ms here, 156–168 ms above), so compare columns within these tables, not across to the ones above.
+Run 2026-10-25 in a 4-core Linux container, interleaved, medians (DBMon server CPU across viewers is from 2026-10-24; the server didn't change). This container ran Lighthouse slower than the article's reruns above (the Solid SPA's TBT on the thread is 444 ms here, 156–168 ms above), so compare columns within these tables, not across to the ones above.
 
 HN thread, 1,406 comments, Lighthouse mobile, 15 rounds:
 
-| | Solid SPA | Datastar SPA | patched | Solid SPA, toggles | Datastar SPA, toggles | patched |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Score | 85 | 70 | 71 | 87 | 71 | 72 |
-| TBT | 337 ms | 2,278 ms | 1,862 ms | 290 ms | 2,062 ms | 1,589 ms |
-| FCP / LCP | 2.56 / 2.60 s | 1.10 / 2.25 s | 1.10 / 2.25 s | 2.56 / 2.60 s | 1.05 / 2.25 s | 1.10 / 2.25 s |
-| Transferred | 338 kB | 227 kB | 227 kB | 340 kB | 227 kB | 227 kB |
-| JavaScript | 36.9 kB | 25.6 kB | 25.9 kB | 37.5 kB | 25.6 kB | 25.9 kB |
-| Script, cold load, 4x CPU (trace, 7 runs) | 388 ms | 2,007 ms | 1,244 ms | 407 ms | 1,736 ms | 1,110 ms |
-| Client navigation from the feed, on screen | 296 ms | 584 ms | 414 ms | 287 ms | 498 ms | 399 ms |
+| | Solid SPA | Datastar SPA | Solid SPA, toggles | Datastar SPA, toggles |
+| --- | ---: | ---: | ---: | ---: |
+| Score | 82 | 71 | 85 | 71 |
+| TBT | 444 ms | 1,957 ms | 334 ms | 1,780 ms |
+| FCP / LCP | 2.60 / 2.64 s | 1.10 / 2.25 s | 2.61 / 2.61 s | 1.10 / 2.25 s |
+| Transferred | 338 kB | 228 kB | 340 kB | 228 kB |
+| JavaScript | 36.9 kB | 26.3 kB | 37.5 kB | 26.3 kB |
+| Script, cold load, 4x CPU (trace, 7 runs) | 475 ms | 1,477 ms | 480 ms | 1,270 ms |
+| Client navigation from the feed, on screen | 292 ms | 489 ms | 304 ms | 430 ms |
 
-The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier, but rendering the thread in the browser costs about five times the Solid SPA's script (which includes hydration), all in one long task. Layout is the same on both sides (about 950 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both; the difference is render time. The patch takes about a third off the script. The toggles first had a signal per comment with a class, text, show and click binding each, which cost about 300 ms more script than `<details>`. With one delegated click flipping a class and CSS doing the rest, they cost less than `<details>`. What's left is the thread itself: 1,406 comments built from `html` templates in one task.
+The Datastar SPA ships less and paints its shell sooner (its document is 0.6 kB against the SSR page's 300 kB), and Lighthouse's LCP lands earlier, but rendering the thread in the browser costs about three times the Solid SPA's script (which includes hydration), all in one long task. Layout is the same on both sides (about 900 ms at 4x), as the markup is. Navigation fetches the same 199 kB of JSON on both; the difference is render time. On beta.2 the thread's TBT was 2,565 ms in the same Lighthouse run and its script 2,007 ms in an earlier one; beta.3's fixes take about a quarter to a third off. The toggles first had a signal per comment with a class, text, show and click binding each, which cost about 300 ms more script than `<details>`. With one delegated click flipping a class and CSS doing the rest, they cost less than `<details>`. What's left is the thread itself: 1,406 comments built from `html` templates in one task.
 
 Store, Lighthouse mobile, 15 rounds:
 
-| Page | Solid SPA | Datastar SPA | patched |
-| --- | --- | --- | --- |
-| Listing (48 tiles, quick add on each): score, TBT | 100, 84 ms | 100, 70 ms | 100, 51 ms |
-| Product (buy box, 12 reviews): score, TBT | 100, 66 ms | 100, 31 ms | 100, 15 ms |
-| LCP, listing / product | 1.10 / 1.10 s | 1.40 / 1.35 s | 1.40 / 1.39 s |
-| Transferred, listing / product | 51 / 47 kB | 33 / 31 kB | 33 / 31 kB |
-| JavaScript | 38.7 kB | 26.6 kB | 26.9 kB |
+| Page | Solid SPA | Datastar SPA |
+| --- | --- | --- |
+| Listing (48 tiles, quick add on each): score, TBT | 99, 96 ms | 100, 75 ms |
+| Product (buy box, 12 reviews): score, TBT | 100, 66 ms | 100, 17 ms |
+| LCP, listing / product | 1.11 / 1.11 s | 1.41 / 1.41 s |
+| Transferred, listing / product | 51 / 47 kB | 33 / 32 kB |
+| JavaScript | 38.7 kB | 27.3 kB |
 
-Both pages now lean to Datastar on blocking time, while Solid paints its LCP sooner. Quick add was first a Rocket component per tile with two signals and two click listeners each, at 610 ms of TBT (359 ms patched). Then it was keyed signals with a delegated click, at 145 ms. Now it has no per-tile signal or binding at all, at 70 ms. On Datastar a DOM-heavy page wants its bindings delegated: one handler on the list, and as few signals as the real state needs.
+Both pages lean to Datastar on blocking time, while Solid paints its LCP sooner. Quick add was first a Rocket component per tile with two signals and two click listeners each, at 610 ms of TBT on beta.2 (359 ms with the two fixes). Then it was keyed signals with a delegated click, at 145 ms. Now it has no per-tile signal or binding at all. On Datastar a DOM-heavy page wants its bindings delegated: one handler on the list, and as few signals as the real state needs.
 
-Live table, 10% change, 5 ticks/s, one tab, 4x CPU, run 2026-10-25 in the same container; 400 rows 5 rounds, 1,000 and 2,000 rows 3 rounds, interleaved, medians (min–max). "Before" is the patched build with the previous `app.js`, which set `textContent` and wrote every patch as it arrived. "Click handled" is how long the page takes to handle a mouse press and release, once a second over the 10 s window (the median of each run's median, and of each run's worst):
+Live table, 10% change, 5 ticks/s, one tab, 4x CPU; 400 rows 5 rounds, 1,000 and 2,000 rows 3 rounds, interleaved, medians (min–max). "Click handled" is how long the page takes to handle a mouse press and release, once a second over the 10 s window (the median of each run's median, and of each run's worst):
 
-| | Solid SPA | Datastar SPA | patched | patched, before |
-| --- | ---: | ---: | ---: | ---: |
-| 400 rows: first table on screen | 0.9 s | 7.5 s | 0.7 s | 0.9 s |
-| 400 rows: ticks applied per second | 5.3 | 5.0 | 5.0 | 5.0 |
-| 400 rows: client busy | 741 (663–877) ms/s | 819 (708–834) ms/s | 761 (702–794) ms/s | 824 (778–878) ms/s |
-| 400 rows: click handled, median / worst | 89 / 213 ms | 75 / 268 ms | 88 / 227 ms | 97 / 211 ms |
-| 400 rows: wire (brotli) | 14.8 kB/s | 6.4 kB/s | 6.3 kB/s | 6.4 kB/s |
-| 1,000 rows: first table on screen | 1.9 s | no table in 30 s | 1.5 s | 2.0 s |
-| 1,000 rows: click handled, median / worst | 327 / 508 ms | | 285 / 639 ms | 465 / 723 ms |
-| 1,000 rows: script | 250 ms/s | | 269 ms/s | 381 ms/s |
-| 2,000 rows: first table on screen | 2.1 s | no table in 30 s | 3.4 s | 4.5 s |
-| 2,000 rows: click handled, median / worst | 586 / 1,556 ms | | 889 / 1,334 ms | 1,695 / 2,599 ms |
-| 2,000 rows: script | 513 ms/s | | 360 ms/s | never caught up |
-| 2,000 rows: wire (brotli) | 83 kB/s | | 41 kB/s | |
-| Server CPU, 1 / 10 / 25 / 50 / 100 viewers | 32–35 / 61–64 / 100–105 / 166–170 / 286–305 ms/s | | 9–17 / 29–30 / 46–50 / 78–88 / 124–144 ms/s | |
+| | Solid SPA | Datastar SPA |
+| --- | ---: | ---: |
+| 400 rows: first table on screen | 0.8 s | 0.7 s |
+| 400 rows: ticks applied per second | 5.2 | 5.0 |
+| 400 rows: client busy | 757 (693–805) ms/s | 776 (722–812) ms/s |
+| 400 rows: click handled, median / worst | 60 / 252 ms | 89 / 199 ms |
+| 400 rows: wire (brotli) | 14.7 kB/s | 6.1 kB/s |
+| 1,000 rows: first table on screen | 1.9 s | 1.3 s |
+| 1,000 rows: click handled, median / worst | 426 / 817 ms | 304 / 516 ms |
+| 1,000 rows: script | 328 ms/s | 295 ms/s |
+| 2,000 rows: first table on screen | 2.0 s | 2.2 s |
+| 2,000 rows: click handled, median / worst | 599 / 1,085 ms | 487 / 1,484 ms |
+| 2,000 rows: script | 543 ms/s | 395 ms/s |
+| 2,000 rows: wire (brotli) | 97.5 kB/s | 43 kB/s |
+| Server CPU, 1 / 10 / 25 / 50 / 100 viewers | 32–35 / 61–64 / 100–105 / 166–170 / 286–305 ms/s | 9–17 / 29–30 / 46–50 / 78–88 / 124–144 ms/s |
 
-Every run that finished ended with the page showing exactly the server's rows. At 1,000 and 2,000 rows every page is at a full core (client busy 991–1,000 ms/s), Solid's included, so these rows compare how each page holds up when saturated. At 2,000 rows one layout of the table takes about 450 ms at 4x on either stack, so neither gets much more than one frame a second. "Applied" counts mutation batches, which on the per-frame page is frames, not ticks (1.2 a second at 2,000 rows, each applying every tick since the last), so it is left out above 400 rows.
+Every run ended with the page showing exactly the server's rows. At 1,000 and 2,000 rows both pages are at a full core (client busy 991–1,000 ms/s), so these rows compare how each page holds up when saturated. At 2,000 rows one layout of the table takes about 400 ms at 4x on either stack, so neither gets much more than one frame a second. "Applied" counts mutation batches, which on the per-frame page is frames, not ticks (1.3 a second at 2,000 rows, each applying every tick since the last), so it is left out above 400 rows.
 
-The table is one `data-on-signal-patch` on the `<tbody>`. The first version bound every cell (a `data-for` row with `data-text`, `data-attr` and `data-effect` per cell, about 12,000 bindings at 1,000 rows). At 400 rows it took 4.9 s to show the table with the patched Rocket, and it stopped answering at 1,000. Bindings are where Datastar spends: each one is a compiled expression and an effect, and those on `data-text` and `data-attr` also detach and re-attach a MutationObserver around every write. With one binding, the patched build shows 400 rows as fast as the Solid SPA and keeps up at the same client cost, sending less than half the bytes for a third to a half of the server CPU.
+The table is one `data-on-signal-patch` on the `<tbody>`. The first version bound every cell (a `data-for` row with `data-text`, `data-attr` and `data-effect` per cell, about 12,000 bindings at 1,000 rows). At 400 rows it took 4.9 s to show the table, and it stopped answering at 1,000. Bindings are where Datastar spends: each one is a compiled expression and an effect, and those on `data-text` and `data-attr` also detach and re-attach a MutationObserver around every write. With one binding, the page shows 400 rows as fast as the Solid SPA and keeps up at the same client cost, sending less than half the bytes for a third to a half of the server CPU.
 
 What was left at 2,000 rows came from two things, found by profiling:
 
 - **The signals themselves cost little here.** Datastar turns `$dbs` into a tree of signals: a Proxy per object and array, a signal per key and a version signal per object, 33 signals and 7 Proxies a row, about 66,000 and 14,000 at 2,000 rows. Nothing subscribes to them, so a write notifies no one. Each tick merges about 200 changed rows; the merge recurses into objects but not arrays, so each changed row's `top5` is rebuilt (about 5,200 new signals a tick). All of that is about 80 ms/s at 4x.
-- **The DOM writes were watched twice.** Datastar watches the whole document for `data-*` attributes and Rocket watches it for hosts to upgrade, both for added nodes and attributes. Setting `textContent` replaces a text node, so each tick made about 3,600 records that both observers walked. Setting an existing text node's `data` is a `characterData` change, which neither watches. That and writing each row once per frame (not once per patch) took script at 2,000 rows from about 540 ms/s to 360, below Solid's 513, and clicks from 1.7 s to 0.9 s. Before it, the page never caught up after the measured window.
+- **The DOM writes were watched twice.** Datastar watches the whole document for `data-*` attributes and Rocket watches it for hosts to upgrade, both for added nodes and attributes. Setting `textContent` replaces a text node, so each tick made about 3,600 records that both observers walked. Setting an existing text node's `data` is a `characterData` change, which neither watches. That and writing each row once per frame (not once per patch) took script at 2,000 rows from about 540 ms/s to 360, and clicks from 1.7 s to 0.9 s (measured on the patched beta.2). Before it, the page never caught up after the measured window.
 
-Solid still handles clicks sooner at 2,000 rows (0.6 s), and at 1,000 rows the two are close. Stock Rocket shows 400 rows too, but its startup observer bug (see above) costs 7.5 s, and at 1,000 rows it shows no table within 30 s.
+At 2,000 rows the two trade places: Datastar handles the median click sooner (0.5 s against 0.6 s), Solid the worst one (1.1 s against 1.5 s), and Solid shows the first table sooner. At 1,000 rows Datastar is ahead on both. On beta.2 without the fixes, the observer bug cost 7.5 s before the 400-row table showed, and at 1,000 rows no table showed within 30 s.
 
 **The runner's check changed for this run.** `dbmon-client.mjs` used to call a page "frozen" when a trivial `page.evaluate` took 5 s or more. On the Datastar SPA at 2,000 rows that call waited 8–30 s while clicks were handled in under 2 s, so the check is now a click, and the runner reports click latency. The live-table tables earlier in this README were measured with the old check.
 
@@ -528,4 +528,4 @@ Rocket is in beta, so its idioms may still change, and these ports will follow t
 
 ## License
 
-MIT for everything here except `apps/dbmon-hypermedia/datastar.js` and `apps/hn-datastar-spa/public/datastar-rocket*.js`, which are Datastar's own bundles (the second patched as described above) under its license (`apps/dbmon-hypermedia/DATASTAR-LICENSE.md`, `apps/hn-datastar-spa/DATASTAR-LICENSE.md`).
+MIT for everything here except `apps/dbmon-hypermedia/datastar.js` and `apps/hn-datastar-spa/public/datastar-rocket*.js`, which are Datastar's own bundles under its license (`apps/dbmon-hypermedia/DATASTAR-LICENSE.md`, `apps/hn-datastar-spa/DATASTAR-LICENSE.md`).

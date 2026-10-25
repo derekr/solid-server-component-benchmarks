@@ -4,7 +4,7 @@
 // markup, CSS and catalog (no data delay, as there).
 //
 // Compression matches the Solid servers: static assets brotli 9 (compressed
-// once), responses brotli 4. ROCKET=patched as in ../hn-datastar-spa.
+// once), responses brotli 4.
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -14,13 +14,12 @@ import { getProducts, getProduct, getReviews } from "./catalog.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3066;
-const ROCKET = process.env.ROCKET === "patched" ? "datastar-rocket-patched.js" : "datastar-rocket.js";
 
 const statics = {};
 for (const [url, file] of [
   ["app.js", "public/app.js"],
   ["app.css", "public/app.css"],
-  ["datastar-rocket.js", "../hn-datastar-spa/public/" + ROCKET]
+  ["datastar-rocket.js", "../hn-datastar-spa/public/datastar-rocket.js"]
 ]) {
   const body = readFileSync(path.resolve(root, file));
   statics["/" + url] = {
@@ -102,4 +101,4 @@ createServer(async (req, res) => {
   }
   if (req.method === "HEAD") return res.writeHead(200).end();
   send(req, res, 200, "text/html; charset=utf-8", shell(dataFor(url.pathname)));
-}).listen(PORT, () => console.log(`Store (Datastar SPA, ${ROCKET}) on http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`Store (Datastar SPA) on http://localhost:${PORT}`));

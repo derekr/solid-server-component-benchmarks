@@ -14,9 +14,7 @@ const [BROTLI_QUALITY, BROTLI_LGWIN] = (process.env.DBMON_BROTLI || "4,22").spli
 const PORT = Number(process.env.PORT || 3064);
 const dir = new URL(".", import.meta.url).pathname;
 const css = readFileSync(dir + "../dbmon-hypermedia/app.css", "utf8");
-// ROCKET=patched: the Rocket build with two performance changes (see README).
-const ROCKET = process.env.ROCKET === "patched" ? "datastar-rocket-patched.js" : "datastar-rocket.js";
-const rocketJs = readFileSync(dir + "../hn-datastar-spa/public/" + ROCKET);
+const rocketJs = readFileSync(dir + "../hn-datastar-spa/public/datastar-rocket.js");
 const rocketBr = zlib.brotliCompressSync(rocketJs, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9 } });
 const appJs = readFileSync(dir + "app.js");
 
@@ -156,4 +154,4 @@ const server = http.createServer((req, res) => {
   res.writeHead(404).end("not found");
 });
 
-server.listen(PORT, () => console.log(`datastar dbmon spa (${ROCKET}) on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`datastar dbmon spa on http://localhost:${PORT}`));
