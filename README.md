@@ -185,7 +185,7 @@ Every server does its tick's work once for all viewers and compresses each conne
 cd runners && node lighthouse.mjs hn 15 && node lighthouse.mjs hn-details 15 && node lighthouse.mjs store 15
 cd runners && node script-time.mjs 4 cold 7 hn-sc,hn-spa,hn-datastar
 cd runners && node script-time.mjs 4 cold 7 hn-sc-toggles,hn-spa-toggles,hn-datastar-toggles,hn-datastar-delegated
-cd runners && node navigation.mjs 5
+cd runners && A=hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar && node navigation.mjs 9 $A && NAV=real node navigation.mjs 9 $A
 cd runners && node store-add.mjs 7
 ```
 
@@ -219,7 +219,16 @@ Both Datastar versions do one start-up task of about 150 ms (median of the longe
 
 Datastar's script time is close to the SC page's, and its TBT is still three times higher. Most of it is the browser, not Datastar: the Datastar page is one streamed document, which the browser parses and lays out in several tasks and paints between them, so first paint comes earlier and the parse and layout tasks after it (150–250 ms each in Lighthouse's simulation) count toward TBT. On the SC page the thread arrives as one chunk that is laid out in a single task before first paint (see "How to read the numbers" below), so TBT sees only the small tasks after it. Datastar's own start-up here (scanning the DOM for attributes) is one task, median 155 ms.
 
-**Client navigation to the thread**, from the click until the thread is on screen (no throttling, 5 runs, medians): Datastar 399 ms (`<details>`), 423 ms (signals), 418 ms (delegated), against SC 266, SPA 300, SC with toggles 554 and Qwik City 936 ms. It fetches the same data as the others (190 kB document, 196 kB with signals), but as a new document: the browser parses it as it streams in, while the Solid apps insert their response in one go. The runner disables the HTTP cache, so each Datastar navigation also fetches `datastar.js` and `app.css` again (14.8 kB, counted as code); in real use both are cached after the first page (they're served with `max-age=3600`), and with the cache on the `<details>` page landed 60–90 ms sooner in a quick check. The runner keeps the cache off for every app so the numbers stay comparable with the article's. Datastar also offers its own in-page navigation (patching the page from a `@get`), which is not measured here. None of the usual mitigations for multi-page navigation are on here either. Speculation rules or a prefetch on hover or `pointerdown` would have the next document loading before the click lands, and the browser cache keeps the script and stylesheet. The Solid apps could prefetch their route data the same way, so this measures the bare navigation on every side. A fresh document per page is also deliberate in a hypermedia app: no client state is carried from route to route, so nothing accumulates in memory across a session, and each page starts from a clean profile.
+**Client navigation to the thread.** Two ways, 9 runs each, medians, no CPU throttling, from pointerdown until the thread is on screen:
+
+| | Solid SC | Solid SPA | SC, toggles | SPA, toggles | Qwik City | Datastar |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Real-world: cache on, 300 ms hover, 80 ms press (`NAV=real`) | 363 ms | 427 ms | 640 ms | 406 ms | 883 ms | 445 ms |
+| Bare: cache off, scripted click, no speculation rules | 263 ms | 298 ms | 530 ms | 294 ms | 840 ms | 424 ms |
+
+The real-world row is the one to read. A person rests the pointer on a link before pressing it and holds the press for a moment, and the browser has the script and stylesheet from the page before. Each app gets the mitigation it would use in production. The Datastar pages carry speculation rules that prefetch a same-origin link after about 200 ms of hover (moderate eagerness), so the document is already there when the press lands, and the header's nav-bar links navigate on `pointerdown`. The Solid router and Qwik City preload on hover as they normally do. The 80 ms press is in every app's time, which is why every app is slower on that row. With the network out of the way, what is left for Datastar is the browser parsing and laying out a new 190 kB document, while the Solid apps insert their response into the page they have. The rules also ask for a prerender, which would do that work before the press too, but Chrome turns prerendering off under automation (`PrerenderingDisabledByDevTools`), so it isn't measured. In a real browser the Datastar navigation would be faster than this row shows.
+
+The bare row is what the article's runner measured: the cache off, a scripted click with no hover, and the page's speculation rules taken out. It is fine as a like-for-like check, but it isn't a real-world benchmark for a multi-page app, which leans on exactly what it turns off. Datastar also offers its own in-page navigation (patching the page from a `@get`), which neither row measures. A fresh document per page is deliberate in a hypermedia app: no client state is carried from route to route, so nothing accumulates in memory across a session, and each page starts from a clean profile.
 
 **Storefront.**
 
