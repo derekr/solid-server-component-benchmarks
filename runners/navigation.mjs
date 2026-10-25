@@ -68,7 +68,7 @@ async function once(browser, base) {
       a.dataset.benchStory = "";
       a.textContent = "story";
       a.style.cssText = "position:fixed;right:0;bottom:0;opacity:0";
-      document.body.appendChild(a);
+      (document.querySelector(".news-list") ?? document.body).appendChild(a);
     }
     addEventListener("pointerdown", () => (sessionStorage.__t0 = performance.timeOrigin + performance.now()), {
       capture: true,

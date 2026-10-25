@@ -125,7 +125,7 @@ const head = title => `<!doctype html>
 <title>${esc(title)}</title>
 <link rel="stylesheet" href="/app.css">
 ${CV ? "<style>.item-view-comments > .comment-children > .comment { content-visibility: auto; contain-intrinsic-size: auto 400px; }</style>\n" : ""}<script type="module" src="/datastar.js"></script>
-<script type="speculationrules">{"prefetch": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}], "prerender": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}]}</script>
+<script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "moderate"}], "prerender": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "moderate"}]}</script>
 </head>
 <body>`;
 
