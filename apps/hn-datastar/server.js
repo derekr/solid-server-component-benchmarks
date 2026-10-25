@@ -76,11 +76,23 @@ async function fetchAPI(path) {
 const getStories = async (type, page) => (mapStories[type] ? fetchAPI(`${mapStories[type]}?page=${page}`) : []);
 
 async function getStory(id) {
+  let story;
   if (id === CACHED_STORY_ID) {
     if (DELAY) await new Promise(r => setTimeout(r, DELAY));
-    return cachedStory;
-  }
-  return fetchAPI(`item/${id}`);
+    story = cachedStory;
+  } else story = await fetchAPI(`item/${id}`);
+  if (!story?.error) fetched.set(id, { story, at: Date.now() });
+  return story;
+}
+
+// The windowed thread's posts read the story its page was just rendered
+// from, as a real server would keep it (every response here is cacheable for
+// a minute), so a scroll doesn't wait on the HN API again. A page load
+// always fetches.
+const fetched = new Map();
+async function getFetchedStory(id) {
+  const hit = fetched.get(id);
+  return hit && Date.now() - hit.at < 60_000 ? hit.story : getStory(id);
 }
 
 const getUser = id => fetchAPI(`user/${id}`);
@@ -157,7 +169,9 @@ const replies = c =>
 // and shows their "collapsed" label.
 const COLLAPSE =
   ` data-on:pointerdown="const id = evt.target.closest('.toggle')?.dataset.id; if (id) $_closed = $_closed.includes(id) ? $_closed.filter(x => x !== id) : [...$_closed, id]"`;
-const COLLAPSE_STYLE = `<style data-text="$_closed.map(id => '#t' + id + ' + .comment-children, #t' + id + ' .open-label { display: none } #t' + id + ' .closed-label { display: inline }').join(' ')"></style>`;
+// The collapsed toggle's highlight, the <details> pages' closed summary.
+const CLOSED_LOOK = "background-color: #fffbf2; padding: 0.3em 0.5em; margin-bottom: 1em";
+const COLLAPSE_STYLE = `<style data-text="$_closed.map(id => '#t' + id + ' + .comment-children, #t' + id + ' .open-label { display: none } #t' + id + ' .closed-label { display: inline } #t' + id + ' > a { ${CLOSED_LOOK} }').join(' ')"></style>`;
 
 function comment(c) {
   return `<li class="comment"><div class="by"><a href="/users/${esc(c.user)}">${esc(c.user)}</a> ${esc(c.time_ago)}</div><div class="text">${c.content ?? ""}</div>${c.comments.length ? replies(c) : ""}</li>`;
@@ -258,7 +272,7 @@ const HAVE = `$have = [...document.querySelectorAll('#comments > .comment')].map
 const TOP = `const rows = [...document.querySelectorAll('#comments > .comment')].filter(c => c.offsetHeight); const first = rows.find(c => c.getBoundingClientRect().bottom > 0); let top, jump = true; if (!first) top = Number(rows.at(-1).dataset.i) + 1; else if (first.getBoundingClientRect().top >= innerHeight) top = Number(first.dataset.i) - 1; else { top = Number(first.dataset.i); jump = false } if (top !== $top) { $top = top; $jump = jump; $flip = 0; ${HAVE}; @post(location.pathname) }`;
 const TOGGLE = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id) { $collapsed = $collapsed.includes(id) ? $collapsed.filter(x => x !== id) : [...$collapsed, id]; if ($_pressed !== id) { $flip = 0; ${HAVE}; @post(location.pathname) } $_pressed = 0 }`;
 const PRESS = `const id = Number(evt.target.closest('.toggle')?.dataset.id); if (id && $collapsed.includes(id) && !document.querySelector('#comments > .u' + id)) { $_pressed = id; $flip = id; ${HAVE}; @post(location.pathname) }`;
-const COLLAPSED_STYLE = `<style data-text="$collapsed.map(id => '.u' + id + ' { display: none } #c' + id + ' > .toggle > a > .open-label { display: none } #c' + id + ' > .toggle > a > .closed-label { display: inline }').join(' ')"></style>`;
+const COLLAPSED_STYLE = `<style data-text="$collapsed.map(id => '.u' + id + ' { display: none } #c' + id + ' > .toggle > a > .open-label { display: none } #c' + id + ' > .toggle > a > .closed-label { display: inline } #c' + id + ' > .toggle > a { ${CLOSED_LOOK} }').join(' ')"></style>`;
 
 function windowThread(s) {
   const rows = rowsOf(s);
@@ -388,7 +402,7 @@ createServer(async (req, res) => {
   if (w) {
     let body = "";
     for await (const chunk of req) body += chunk;
-    const events = windowEvents(await getStory(w[1]), signalsOf(body));
+    const events = windowEvents(await getFetchedStory(w[1]), signalsOf(body));
     if (!events) return res.writeHead(204).end();
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
