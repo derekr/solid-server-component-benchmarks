@@ -78,7 +78,7 @@ const esc = s =>
 function nav(active) {
   const link = (href, label) =>
     `<a href="${href}"${href === active ? " data-active" : ""}><strong>${label}</strong></a>`;
-  return `<header class="header"><nav class="inner">${link("/", "HN")}${link("/new", "New")}${link("/show", "Show")}${link("/ask", "Ask")}${link("/job", "Jobs")}<a class="github" href="http://github.com/solidjs/solid" target="_blank" rel="noreferrer">Built with Solid</a></nav></header>`;
+  return `<header class="header"><nav class="inner">${link("/", "HN")}${link("/new", "New")}${link("/show", "Show")}${link("/ask", "Ask")}${link("/job", "Jobs")}<a class="github" href="https://github.com/starfederation/datastar" target="_blank" rel="noreferrer">Built with Datastar</a></nav></header>`;
 }
 
 const head = title => `<!doctype html>
