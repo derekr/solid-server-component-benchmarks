@@ -316,9 +316,24 @@ a {
 }
 
 /* hn-datastar's TOGGLES=signals and TOGGLES=window: a toggle reads "[-]"
-   until the page's collapsed-ids <style> swaps its label. */
+   until the page's collapsed-ids <style> swaps its label, and looks like the
+   <details> pages' summary: plain while open, and highlighted while collapsed
+   (CLOSED_LOOK in server.js, added by the same <style>). */
 .comment .toggle.open > a > .closed-label {
   display: none;
+}
+
+.comment div.toggle > a {
+  display: block;
+  font-size: 0.9em;
+  margin: 1em 0;
+  border-radius: 4px;
+  color: #626262;
+  cursor: pointer;
+}
+
+.comment div.toggle:has(+ .comment-children) > a {
+  margin-bottom: -0.5em;
 }
 
 /* hn-datastar's TOGGLES=window: the empty space above and below the loaded
