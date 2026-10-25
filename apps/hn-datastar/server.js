@@ -75,10 +75,17 @@ const esc = s =>
 
 // The router marks the current feed's link with data-active; here the server
 // knows the route, so it marks it.
+// The page's own navigation is plain links, made fast the way a multi-page
+// app does it: speculation rules (in the head) prerender a same-origin link
+// once the pointer has rested on it (moderate eagerness: about 200 ms of
+// hover, or pointerdown), and the header's links, a nav bar, go on
+// pointerdown instead of waiting for the click.
+const NAV_ON_DOWN = ` data-on:pointerdown="const a = evt.target.closest('a'); if (a && a.origin === location.origin && evt.button === 0 && !(evt.metaKey || evt.ctrlKey || evt.shiftKey || evt.altKey)) location.href = a.href"`;
+
 function nav(active) {
   const link = (href, label) =>
     `<a href="${href}"${href === active ? " data-active" : ""}><strong>${label}</strong></a>`;
-  return `<header class="header"><nav class="inner">${link("/", "HN")}${link("/new", "New")}${link("/show", "Show")}${link("/ask", "Ask")}${link("/job", "Jobs")}<a class="github" href="https://github.com/starfederation/datastar" target="_blank" rel="noreferrer">Built with Datastar</a></nav></header>`;
+  return `<header class="header"><nav class="inner"${NAV_ON_DOWN}>${link("/", "HN")}${link("/new", "New")}${link("/show", "Show")}${link("/ask", "Ask")}${link("/job", "Jobs")}<a class="github" href="https://github.com/starfederation/datastar" target="_blank" rel="noreferrer">Built with Datastar</a></nav></header>`;
 }
 
 const head = title => `<!doctype html>
@@ -89,6 +96,7 @@ const head = title => `<!doctype html>
 <title>${esc(title)}</title>
 <link rel="stylesheet" href="/app.css">
 <script type="module" src="/datastar.js"></script>
+<script type="speculationrules">{"prefetch": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}], "prerender": [{"where": {"href_matches": "/*"}, "eagerness": "moderate"}]}</script>
 </head>
 <body>`;
 
