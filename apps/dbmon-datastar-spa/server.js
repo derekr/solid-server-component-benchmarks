@@ -103,6 +103,19 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "max-age=3600" });
     return res.end(appJs);
   }
+  // Runner hooks (see ../dbmon-hypermedia/databases.js).
+  if (url.pathname === "/__dbmon/pause") {
+    globalThis.__dbmon.pause();
+    return res.writeHead(204).end();
+  }
+  if (url.pathname === "/__dbmon/rows") {
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(JSON.stringify(globalThis.__dbmon.rows()));
+  }
+  if (url.pathname === "/__dbmon/ticks") {
+    res.writeHead(200, { "content-type": "application/json" });
+    return res.end(JSON.stringify(globalThis.__dbmon.ticks()));
+  }
   if (url.pathname === "/updates") {
     const br = /\bbr\b/.test(req.headers["accept-encoding"] || "");
     res.writeHead(200, {
