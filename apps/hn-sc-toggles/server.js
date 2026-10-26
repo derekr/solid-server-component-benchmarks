@@ -43,8 +43,10 @@ function encoder(req, res) {
   return stream;
 }
 
-// The story page's client toggles sit in slots, which need `regions`.
-const LATE_CHUNKS = [[/^\/stories\/\d+$/, ["regions"]]];
+// The story page's client toggles sit in slots, which need `regions`; the
+// feeds preload it too, since their links lead to a story, so a client
+// navigation there doesn't wait for it.
+const LATE_CHUNKS = [[/^\/(stories\/\d+|top|new|show|ask|job)?$/, ["regions"]]];
 // Framework chunks a page imports only once its entry script has run (found
 // by loading each page with a network trace): the document's Link header
 // modulepreloads them, so they load beside the entry instead of a round trip
