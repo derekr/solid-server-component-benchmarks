@@ -1,24 +1,32 @@
-{"round":1,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"tableMs":472,"liveMs":654,"busyMs":422,"heapMB":2.7,"htmlKB":0.8,"jsKB":71.9,"otherKB":28}
-{"round":1,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"tableMs":180,"liveMs":240,"busyMs":404,"heapMB":1.8,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.6}
-{"round":1,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"tableMs":50,"liveMs":110,"busyMs":239,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":1.9}
-{"round":2,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"tableMs":448,"liveMs":645,"busyMs":437,"heapMB":2.6,"htmlKB":0.8,"jsKB":71.9,"otherKB":27.2}
-{"round":2,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"tableMs":156,"liveMs":560,"busyMs":381,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.6}
-{"round":2,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"tableMs":57,"liveMs":109,"busyMs":263,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
-{"round":3,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"tableMs":431,"liveMs":500,"busyMs":441,"heapMB":2.6,"htmlKB":0.8,"jsKB":71.9,"otherKB":24}
-{"round":3,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"tableMs":185,"liveMs":602,"busyMs":436,"heapMB":1.9,"htmlKB":4.6,"jsKB":64.3,"otherKB":4.5}
-{"round":3,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"tableMs":53,"liveMs":129,"busyMs":212,"heapMB":1.4,"htmlKB":3.2,"jsKB":12.9,"otherKB":2.1}
-{"round":4,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"tableMs":396,"liveMs":415,"busyMs":382,"heapMB":2.6,"htmlKB":0.8,"jsKB":71.9,"otherKB":24.2}
-{"round":4,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"tableMs":86,"liveMs":559,"busyMs":379,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.5}
-{"round":4,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"tableMs":100,"liveMs":398,"busyMs":255,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
-{"round":5,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"tableMs":371,"liveMs":421,"busyMs":346,"heapMB":2.6,"htmlKB":0.8,"jsKB":71.9,"otherKB":24.1}
-{"round":5,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"tableMs":77,"liveMs":540,"busyMs":347,"heapMB":1.9,"htmlKB":4.6,"jsKB":64.3,"otherKB":4.5}
-{"round":5,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"tableMs":68,"liveMs":381,"busyMs":251,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
-{"round":1,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"tableMs":1737,"liveMs":1918,"busyMs":1576,"heapMB":15.1,"htmlKB":0.8,"jsKB":71.9,"otherKB":1084.5}
-{"round":1,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"tableMs":81,"liveMs":175,"busyMs":378,"heapMB":1.9,"htmlKB":4.6,"jsKB":64.3,"otherKB":4.5}
-{"round":1,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"tableMs":60,"liveMs":409,"busyMs":259,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
-{"round":2,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"tableMs":1675,"liveMs":1872,"busyMs":1448,"heapMB":15.5,"htmlKB":0.8,"jsKB":71.9,"otherKB":1078.3}
-{"round":2,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"tableMs":125,"liveMs":177,"busyMs":214,"heapMB":1.8,"htmlKB":4.6,"jsKB":64.3,"otherKB":0.8}
-{"round":2,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"tableMs":56,"liveMs":149,"busyMs":245,"heapMB":1.4,"htmlKB":3.2,"jsKB":12.9,"otherKB":2}
-{"round":3,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"tableMs":1948,"liveMs":2217,"busyMs":1787,"heapMB":16.7,"htmlKB":0.8,"jsKB":71.9,"otherKB":1228.8}
-{"round":3,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"tableMs":106,"liveMs":207,"busyMs":369,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.5}
-{"round":3,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"tableMs":69,"liveMs":601,"busyMs":266,"heapMB":1.4,"htmlKB":3.2,"jsKB":12.9,"otherKB":2}
+{"round":1,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":878,"liveMs":993,"busyMs":683,"heapMB":2.6,"htmlKB":0.9,"jsKB":71.9,"otherKB":26.7}
+{"round":1,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":268,"liveMs":835,"busyMs":493,"heapMB":1.9,"htmlKB":4.6,"jsKB":64.3,"otherKB":4.5}
+{"round":1,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":140,"liveMs":235,"busyMs":260,"heapMB":1.3,"htmlKB":3.1,"jsKB":12.9,"otherKB":0}
+{"round":1,"app":"dbmon-hypermedia-window-get","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":162,"liveMs":713,"busyMs":517,"heapMB":1.5,"htmlKB":3.9,"jsKB":12.9,"otherKB":9.7}
+{"round":2,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":813,"liveMs":989,"busyMs":578,"heapMB":2.6,"htmlKB":0.9,"jsKB":71.9,"otherKB":26.5}
+{"round":2,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":266,"liveMs":800,"busyMs":468,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.5}
+{"round":2,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":139,"liveMs":797,"busyMs":332,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
+{"round":2,"app":"dbmon-hypermedia-window-get","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":140,"liveMs":246,"busyMs":335,"heapMB":1.3,"htmlKB":3.9,"jsKB":12.9,"otherKB":9.8}
+{"round":3,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":719,"liveMs":739,"busyMs":459,"heapMB":2.6,"htmlKB":0.9,"jsKB":71.9,"otherKB":24}
+{"round":3,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":291,"liveMs":357,"busyMs":255,"heapMB":1.8,"htmlKB":4.7,"jsKB":64.3,"otherKB":0.8}
+{"round":3,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":143,"liveMs":638,"busyMs":413,"heapMB":1.4,"htmlKB":3.2,"jsKB":12.9,"otherKB":2.1}
+{"round":3,"app":"dbmon-hypermedia-window-get","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":145,"liveMs":225,"busyMs":317,"heapMB":1.3,"htmlKB":3.9,"jsKB":12.9,"otherKB":9.8}
+{"round":4,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":886,"liveMs":1040,"busyMs":665,"heapMB":2.6,"htmlKB":0.9,"jsKB":71.9,"otherKB":27}
+{"round":4,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":280,"liveMs":886,"busyMs":568,"heapMB":1.9,"htmlKB":4.6,"jsKB":64.3,"otherKB":4.5}
+{"round":4,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":131,"liveMs":591,"busyMs":355,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
+{"round":4,"app":"dbmon-hypermedia-window-get","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":143,"liveMs":261,"busyMs":345,"heapMB":1.3,"htmlKB":4,"jsKB":12.9,"otherKB":7.5}
+{"round":5,"app":"dbmon-spa-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":754,"liveMs":1137,"busyMs":526,"heapMB":2.7,"htmlKB":0.9,"jsKB":71.9,"otherKB":30.5}
+{"round":5,"app":"dbmon-sc-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":268,"liveMs":860,"busyMs":540,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.6}
+{"round":5,"app":"dbmon-hypermedia-window","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":145,"liveMs":590,"busyMs":330,"heapMB":1.4,"htmlKB":3.2,"jsKB":12.9,"otherKB":2}
+{"round":5,"app":"dbmon-hypermedia-window-get","rows":400,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":162,"liveMs":297,"busyMs":454,"heapMB":1.4,"htmlKB":4,"jsKB":12.9,"otherKB":10}
+{"round":1,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":2759,"liveMs":2947,"busyMs":2307,"heapMB":16.8,"htmlKB":0.9,"jsKB":71.9,"otherKB":1314.1}
+{"round":1,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":264,"liveMs":870,"busyMs":551,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.5}
+{"round":1,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":121,"liveMs":598,"busyMs":327,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
+{"round":1,"app":"dbmon-hypermedia-window-get","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":145,"liveMs":648,"busyMs":478,"heapMB":1.5,"htmlKB":4,"jsKB":12.9,"otherKB":9.9}
+{"round":2,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":3108,"liveMs":3384,"busyMs":2721,"heapMB":19.7,"htmlKB":0.9,"jsKB":71.9,"otherKB":1442.4}
+{"round":2,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":304,"liveMs":901,"busyMs":569,"heapMB":1.9,"htmlKB":4.7,"jsKB":64.3,"otherKB":4.6}
+{"round":2,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":125,"liveMs":566,"busyMs":313,"heapMB":1.4,"htmlKB":3.1,"jsKB":12.9,"otherKB":2}
+{"round":2,"app":"dbmon-hypermedia-window-get","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":147,"liveMs":212,"busyMs":297,"heapMB":1.3,"htmlKB":3.9,"jsKB":12.9,"otherKB":7.4}
+{"round":3,"app":"dbmon-spa-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":2912,"liveMs":3171,"busyMs":2368,"heapMB":16.9,"htmlKB":0.9,"jsKB":71.9,"otherKB":1298.1}
+{"round":3,"app":"dbmon-sc-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":291,"liveMs":373,"busyMs":361,"heapMB":1.8,"htmlKB":4.7,"jsKB":64.3,"otherKB":0.8}
+{"round":3,"app":"dbmon-hypermedia-window","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":141,"liveMs":188,"busyMs":258,"heapMB":1.3,"htmlKB":3.2,"jsKB":12.9,"otherKB":0}
+{"round":3,"app":"dbmon-hypermedia-window-get","rows":10000,"cpuRate":4,"net":"70 ms RTT, 10 Mbit/s","tableMs":204,"liveMs":645,"busyMs":426,"heapMB":1.5,"htmlKB":4,"jsKB":12.9,"otherKB":10}
