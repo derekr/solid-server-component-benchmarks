@@ -5,6 +5,7 @@ import "server-only";
 // this module is ever imported from client code.
 import type { StoryDefinition, StoryTypes, UserDefinition } from "~/types";
 import cachedStory from "./story-30186326.json";
+import feedsSnapshot from "../../../hn-sc/src/server/feeds-snapshot.json";
 
 const story = (path: string) => `https://node-hnapi.herokuapp.com/${path}`;
 const user = (path: string) => `https://hacker-news.firebaseio.com/v0/${path}.json`;
@@ -42,6 +43,14 @@ async function fetchAPI(path: string) {
 export async function getStories(type: StoryTypes, page: number): Promise<StoryDefinition[]> {
   const storyType = mapStories[type];
   if (!storyType) return [];
+  // HN_FEED=snapshot serves the feeds from a fixed snapshot (four pages of
+  // each, after the story's HN_DELAY_MS), so the feed pages and their paging
+  // can be measured without the live API.
+  if (process.env.HN_FEED === "snapshot") {
+    const delay = Number(process.env.HN_DELAY_MS || 0);
+    if (delay) await new Promise(r => setTimeout(r, delay));
+    return ((feedsSnapshot as Record<string, StoryDefinition[]>)[`${storyType}?page=${page}`] ?? []);
+  }
   return fetchAPI(`${storyType}?page=${page}`);
 }
 

@@ -26,11 +26,31 @@ export function getStory(id: number) {
 export function getUser(id: number) {
   return get(`https://hacker-news.firebaseio.com/v0/user/${id}.json`);
 }
+// The feeds are read on the server, as the cached story is (and as the
+// Solid apps' getStories server function is), so a client navigation to a
+// feed page goes through the server too. HN_FEED=snapshot serves them from
+// the same fixed snapshot as the Solid apps (hn-sc's copy, read at run time
+// from the app's directory), after the same HN_DELAY_MS, so the feed pages
+// can be measured without the live API.
+let feedsSnapshot: Record<string, unknown> | undefined;
+const getFeed = server$(async (p: string) => {
+  if (process.env.HN_FEED !== "snapshot")
+    // Benchmark: an unreachable live API shows an empty feed instead of a
+    // 500 page, so the navigation runner can start from it.
+    return get(`https://node-hnapi.herokuapp.com/${p}`).catch(() => []);
+  const delay = Number(process.env.HN_DELAY_MS || 0);
+  if (delay) await new Promise((r) => setTimeout(r, delay));
+  if (!feedsSnapshot) {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    feedsSnapshot = JSON.parse(readFileSync(join(process.cwd(), "../hn-sc/src/server/feeds-snapshot.json"), "utf8"));
+  }
+  return (feedsSnapshot![p] ?? []) as any[];
+});
+
 export function getStories(type: keyof(typeof mapStories), page: number) {
   const l = mapStories[type];
-  // Benchmark: an unreachable live API shows an empty feed instead of a 500
-  // page, so the navigation runner can start from it (the story is cached).
-  return l ? get(`https://node-hnapi.herokuapp.com/${l}?page=${page}`).catch(() => []) : [];
+  return l ? getFeed(`${l}?page=${page}`) : [];
 }
 
 async function get(href: string) {

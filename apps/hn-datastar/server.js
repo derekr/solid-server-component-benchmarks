@@ -73,7 +73,17 @@ async function fetchAPI(path) {
   }
 }
 
-const getStories = async (type, page) => (mapStories[type] ? fetchAPI(`${mapStories[type]}?page=${page}`) : []);
+// HN_FEED=snapshot: the feeds from the Solid apps' fixed snapshot (four pages
+// of each), after the same HN_DELAY_MS, so the feed pages and their paging
+// can be measured without the live API.
+const feedsSnapshot = process.env.HN_FEED === "snapshot" ? JSON.parse(readFileSync(dir + "../hn-sc/src/server/feeds-snapshot.json", "utf8")) : null;
+
+async function getStories(type, page) {
+  if (!mapStories[type]) return [];
+  if (!feedsSnapshot) return fetchAPI(`${mapStories[type]}?page=${page}`);
+  if (DELAY) await new Promise(r => setTimeout(r, DELAY));
+  return feedsSnapshot[`${mapStories[type]}?page=${page}`] ?? [];
+}
 
 async function getStory(id) {
   let story;

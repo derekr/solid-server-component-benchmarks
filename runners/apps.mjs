@@ -10,8 +10,12 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../apps/", import.meta.url));
 
 // HN_DELAY_MS: the cached story (30186326) is served after a fixed delay so
-// both HN apps stream behind the same data latency.
-const HN = { HN_DELAY_MS: "150" };
+// both HN apps stream behind the same data latency. HN_FEED=snapshot serves
+// the feeds from a fixed snapshot (apps/hn-sc/src/server/feeds-snapshot.json,
+// four pages of each, synthetic stories around the real 30186326) behind the
+// same delay, so the feed pages and their paging measure the same everywhere
+// and need no live API.
+const HN = { HN_DELAY_MS: "150", HN_FEED: process.env.HN_FEED ?? "snapshot" };
 
 export const APPS = {
   "hn-sc": { port: 3004, env: HN },
@@ -126,7 +130,9 @@ function parseNet(spec) {
   return { rttMs: rtt || 0, mbps: mbps || 0 };
 }
 export const netLabel = () => (NET ? `${NET.rttMs} ms RTT, ${NET.mbps || "unlimited"} Mbit/s` : "loopback");
-const PROXY_OFFSET = 1000;
+// The proxy listens on the app's port + 10000: hn-next-rsc runs Next itself
+// on its port + 1000, and Chrome refuses some ports (5060 and 5061, SIP).
+const PROXY_OFFSET = 10000;
 
 export function shapingProxy(port, target, { rttMs, mbps } = NET ?? {}) {
   // Read when the proxy starts, so a setNet() before start() applies.
