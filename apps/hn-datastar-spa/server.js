@@ -38,6 +38,9 @@ for (const [url, file] of [["app.js", "app.js"], ["app.css", "app.css"], ["datas
 }
 
 const feeds = { top: "news", new: "newest", show: "show", ask: "ask", job: "jobs" };
+// HN_FEED=snapshot: the feeds from the Solid apps' fixed snapshot, after the
+// same HN_DELAY_MS, so the feed pages can be measured without the live API.
+const feedsSnapshot = process.env.HN_FEED === "snapshot" ? JSON.parse(readFileSync(path.resolve(root, "../hn-sc/src/server/feeds-snapshot.json"), "utf8")) : null;
 
 async function hnApi(p) {
   const url = p.startsWith("user/")
@@ -61,8 +64,12 @@ async function api(p, query) {
     }
     return hnApi(`item/${m[1]}`);
   }
-  if ((m = p.match(/^\/api\/stories\/(\w+)$/)) && feeds[m[1]])
-    return hnApi(`${feeds[m[1]]}?page=${Number(query.get("page")) || 1}`);
+  if ((m = p.match(/^\/api\/stories\/(\w+)$/)) && feeds[m[1]]) {
+    const feed = `${feeds[m[1]]}?page=${Number(query.get("page")) || 1}`;
+    if (!feedsSnapshot) return hnApi(feed);
+    if (DELAY) await new Promise(r => setTimeout(r, DELAY));
+    return JSON.stringify(feedsSnapshot[feed] ?? []);
+  }
   if ((m = p.match(/^\/api\/user\/([\w-]+)$/))) return hnApi(`user/${m[1]}`);
   return null;
 }
@@ -86,6 +93,7 @@ const shell = data => `<!DOCTYPE html>
 <title>Hacker News</title>
 <link rel="stylesheet" href="/app.css">
 ${data ? `<link rel="preload" as="fetch" href="${data}" crossorigin>` : ""}
+<link rel="modulepreload" href="/datastar-rocket.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>

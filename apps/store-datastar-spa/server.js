@@ -69,6 +69,7 @@ const shell = data => `<!DOCTYPE html>
 <title>Solid Supply</title>
 <link rel="stylesheet" href="/app.css">
 ${data ? `<link rel="preload" as="fetch" href="${data}" crossorigin>` : ""}
+<link rel="modulepreload" href="/datastar-rocket.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body data-signals="{cart: [], cartOpen: false}">

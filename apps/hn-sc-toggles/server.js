@@ -43,6 +43,21 @@ function encoder(req, res) {
   return stream;
 }
 
+// The story page's client toggles sit in slots, which need `regions`.
+const LATE_CHUNKS = [[/^\/stories\/\d+$/, ["regions"]]];
+// Framework chunks a page imports only once its entry script has run (found
+// by loading each page with a network trace): the document's Link header
+// modulepreloads them, so they load beside the entry instead of a round trip
+// after it. The names are the manifest's, so a rebuild's hashes follow.
+const manifest = JSON.parse(readFileSync(path.resolve(root, "dist/client/.vite/manifest.json"), "utf8"));
+const chunk = name => Object.values(manifest).find(c => c.isDynamicEntry && c.name === name)?.file;
+const preloadLink = pathname =>
+  LATE_CHUNKS.filter(([re]) => re.test(pathname))
+    .flatMap(([, names]) => names.map(chunk))
+    .filter(Boolean)
+    .map(file => `</${file}>; rel=modulepreload`)
+    .join(", ");
+
 // Static assets compress once at a higher quality — they're cached, not streamed.
 const staticBrotli = new Map();
 
@@ -94,6 +109,10 @@ createServer(async (req, res) => {
       if (key !== "set-cookie") res.setHeader(key, value);
     });
     if (cookies?.length) res.setHeader("set-cookie", cookies);
+    if (/text\/html/.test(response.headers.get("content-type") || "")) {
+      const link = preloadLink(url.split("?")[0]);
+      if (link) res.setHeader("Link", [response.headers.get("link"), link].filter(Boolean).join(", "));
+    }
     res.statusCode = response.status;
     const out = encoder(req, res) ?? res;
     if (response.body) {

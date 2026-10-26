@@ -78,6 +78,7 @@ const page = () => `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DBMon (Datastar SPA)</title>
+<link rel="modulepreload" href="/datastar-rocket.js">
 <style>${css}</style>
 <script type="module" src="/app.js"></script>
 </head>
