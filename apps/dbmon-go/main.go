@@ -12,8 +12,8 @@
 // ship the same bundle.
 //
 // PATCH (whole, rows, replace, signals, window), DBMON_WINDOW,
-// DBMON_OVERSCAN, DBMON_SCROLL_PATCH and DBMON_BROTLI mean what they mean
-// for the Node server. DBMON_BROTLI_IMPL picks the brotli encoder:
+// DBMON_OVERSCAN, DBMON_SCROLL_PATCH, DBMON_WINDOW_FETCH (with DBMON_STEP
+// and DBMON_AHEAD) and DBMON_BROTLI mean what they mean for the Node server. DBMON_BROTLI_IMPL picks the brotli encoder:
 //
 //	sdk      (default) the SDK's WithCompression(WithBrotli(...)), which is
 //	         andybalholm/brotli, a pure-Go port
@@ -60,6 +60,10 @@ var (
 	window      = int(envNum("DBMON_WINDOW", 40))
 	overscan    = int(envNum("DBMON_OVERSCAN", 0))
 	scrollPatch = envStr("DBMON_SCROLL_PATCH", "morph")
+	fetchMode   = envStr("DBMON_WINDOW_FETCH", "stream") // window mode: "stream" or "get"
+	step        = int(envNum("DBMON_STEP", 20))          // GET slices: rows per grid cell
+	ahead       = int(envNum("DBMON_AHEAD", 2))          // GET slices: cells preloaded ahead
+	getSlices   = mode == "window" && fetchMode == "get"
 	brotliImpl  = envStr("DBMON_BROTLI_IMPL", "sdk")
 	brQ, brWin  = brotliSettings()
 )
@@ -180,6 +184,9 @@ func signalsOf(dbs []*DB) string {
 // its offset) and writes whatever the simulation or a scroll hands it ----
 
 type msg struct {
+	catchUp   bool // GET slices: a slice is on the page (cell, since)
+	cell      int
+	since     int
 	html      string // a tick rendered once for everyone (whole, rows, replace)
 	signals   string // a signals tick or snapshot
 	dbs       []*DB  // window mode: a tick (with changedAt) or the snapshot
@@ -191,6 +198,8 @@ type msg struct {
 type client struct {
 	id     string
 	offset int
+	cell   int // GET slices: the cell on the page, and the tick it was rendered at
+	tick   int
 	ch     chan msg
 }
 
@@ -231,8 +240,104 @@ func (c *client) scrollEvent(sse *datastar.ServerSentEventGenerator, dbs []*DB, 
 	}
 }
 
+// ---- window mode, GET slices (DBMON_WINDOW_FETCH=get), as in server.js ----
+// A scroll into a new cell GETs that cell's slice, and every slice patches
+// in preloads for the next `ahead` cells in the scroll direction. The stream
+// carries the live updates: a slice on the page posts its cell and tick to
+// /view, and the client is sent its cell's rows that changed since.
+
+type tickChange struct {
+	tick      int
+	changedAt []int
+}
+
+var (
+	histMu  sync.Mutex
+	tickNo  int
+	history []tickChange // the last 64 ticks
+)
+
+func currentTick() int {
+	histMu.Lock()
+	defer histMu.Unlock()
+	return tickNo
+}
+
+func cellOf(offset int) int { return offset / step * step }
+
+// The rows a cell's slice holds, as the Solid server-component window cuts
+// them: overscan rows above the cell, the viewport plus a cell below.
+func cellRange(cell, n int) (int, int) {
+	return max(0, cell-overscan), min(n, cell+window+step)
+}
+
+func sliceURL(cell int) string { return fmt.Sprintf("/slice?cell=%d&datastar=%%7B%%7D", cell) }
+
+func preloadLinks(cell, n int) string {
+	url := func(c int) string {
+		if c >= 0 && c < n {
+			return "'" + sliceURL(c) + "'"
+		}
+		return "null"
+	}
+	var b strings.Builder
+	for k := 1; k <= ahead; k++ {
+		fmt.Fprintf(&b, `<link id="slice-ahead-%d" rel="preload" as="fetch" crossorigin data-attr:href="$_dir < 0 ? %s : %s">`, k, url(cell-k*step), url(cell+k*step))
+	}
+	return b.String()
+}
+
+var dataAttrStyle = regexp.MustCompile(` data-attr:style="[^"]*"`)
+
+func sliceTable(dbs []*DB, cell int) string {
+	from, to := cellRange(cell, len(dbs))
+	return dataAttrStyle.ReplaceAllString(renderTable(dbs[from:to], from), "")
+}
+
+func slice(cell int) string {
+	tick := currentTick() // before the table: a later table is harmless, an earlier one isn't
+	dbs := sim0.current()
+	return sliceTable(dbs, cell) +
+		fmt.Sprintf(`<div id="slice-meta" data-init="$cell = %d; $tick = %d; @post('/view', {requestCancellation: 'disabled'})"></div>`, cell, tick) +
+		preloadLinks(cell, len(dbs))
+}
+
+// The rows of the client's cell that changed after `since`, or all of them
+// if that tick is no longer in the history.
+func (c *client) catchUp(sse *datastar.ServerSentEventGenerator, since int) {
+	dbs := sim0.current()
+	from, to := cellRange(c.cell, len(dbs))
+	histMu.Lock()
+	known := len(history) > 0 && since >= history[0].tick-1
+	at := map[int]bool{}
+	if known {
+		for _, h := range history {
+			if h.tick > since {
+				for _, i := range h.changedAt {
+					if i >= from && i < to {
+						at[i] = true
+					}
+				}
+			}
+		}
+	}
+	histMu.Unlock()
+	var b strings.Builder
+	for i := from; i < to; i++ {
+		if !known || at[i] {
+			writeRow(&b, dbs[i])
+		}
+	}
+	if b.Len() > 0 {
+		sse.PatchElements(b.String())
+	}
+}
+
 func (c *client) write(sse *datastar.ServerSentEventGenerator, m msg) {
 	switch {
+	case m.catchUp:
+		c.cell = m.cell
+		c.catchUp(sse, m.since)
 	case m.scrollTo >= 0:
 		if m.scrollTo != c.offset {
 			c.scrollEvent(sse, sim0.current(), m.scrollTo)
@@ -246,10 +351,15 @@ func (c *client) write(sse *datastar.ServerSentEventGenerator, m msg) {
 		} else {
 			sse.PatchElements(m.html)
 		}
+	case m.snapshot && getSlices:
+		c.catchUp(sse, c.tick)
 	case m.snapshot: // window mode
 		c.windowEvent(sse, m.dbs, c.offset)
 	case m.dbs != nil: // window tick: the changed rows in this client's slice
 		from, to := rangeOf(c.offset, len(m.dbs))
+		if getSlices {
+			from, to = cellRange(c.cell, len(m.dbs))
+		}
 		var b strings.Builder
 		for _, i := range m.changedAt {
 			if i >= from && i < to {
@@ -272,6 +382,13 @@ var (
 )
 
 func onTick(dbs []*DB, changedAt []int) {
+	histMu.Lock()
+	tickNo++
+	history = append(history, tickChange{tickNo, changedAt})
+	if len(history) > 64 {
+		history = history[1:]
+	}
+	histMu.Unlock()
 	// As server.js: a tick that changed none of the rows a style patches
 	// sends nothing (window mode decides per client).
 	if len(changedAt) == 0 && mode != "whole" && mode != "window" {
@@ -384,9 +501,23 @@ var acceptsBr = regexp.MustCompile(`\bbr\b`)
 // ---- the page ----
 
 func page() string {
+	tick := currentTick()
 	dbs := sim0.current()
-	var body string
-	if mode == "window" {
+	var body, head string
+	if getSlices {
+		id := strconv.FormatUint(rand.Uint64(), 36)
+		cell := fmt.Sprintf("Math.floor(el.scrollTop / %d) * %d", rowHeight*step, step)
+		view := fmt.Sprintf("$_want !== %s && ($_dir = %s > $_want ? 1 : -1, $_want = %s, @get('/slice?cell=' + $_want, {payload: {}}))", cell, cell, cell)
+		head = preloadLinks(0, len(dbs)) + "\n"
+		body = fmt.Sprintf(`<style>#dbmon tr{height:%dpx}#dbmon td{white-space:nowrap}</style>
+<div id="viewport" style="height:100vh;overflow-y:auto" data-signals:cid="'%s'" data-signals:cell="0" data-signals:tick="%d" data-signals:_want="0" data-signals:_dir="1"
+  data-on:scroll__throttle.32ms="%s" data-on:scrollend="%s">
+<div style="position:relative;height:%dpx" data-init="@get('/updates')">
+%s
+</div>
+</div>
+<div id="slice-meta"></div>`, rowHeight, id, tick, view, view, len(dbs)*rowHeight, sliceTable(dbs, 0))
+	} else if mode == "window" {
 		id := strconv.FormatUint(rand.Uint64(), 36)
 		from, to := rangeOf(0, len(dbs))
 		view := fmt.Sprintf("$offset = Math.floor(el.scrollTop / %d); @post('/view')", rowHeight)
@@ -413,7 +544,7 @@ func page() string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DBMon (Datastar, Go)</title>
 <style>` + css + `</style>
-<script type="module" src="/datastar.js"></script>
+` + head + `<script type="module" src="/datastar.js"></script>
 </head>
 <body>
 ` + body + `
@@ -423,33 +554,46 @@ func page() string {
 
 // A window-mode client's signals (the `datastar` query parameter on a GET,
 // the JSON body of a POST).
-func viewOf(r *http.Request) (string, int) {
+type view struct {
+	id                 string
+	offset, cell, tick int
+}
+
+func viewOf(r *http.Request) view {
 	var s struct {
 		Cid    any `json:"cid"`
 		Offset any `json:"offset"`
+		Cell   any `json:"cell"`
+		Tick   any `json:"tick"`
 	}
 	if err := datastar.ReadSignals(r, &s); err != nil {
-		return "", 0
+		return view{}
 	}
-	offset := 0
-	switch v := s.Offset.(type) {
-	case float64:
-		offset = int(v)
-	case string:
-		offset, _ = strconv.Atoi(v)
+	num := func(x any) int {
+		switch v := x.(type) {
+		case float64:
+			return int(v)
+		case string:
+			n, _ := strconv.Atoi(v)
+			return n
+		}
+		return 0
 	}
 	n := len(sim0.current())
-	offset = max(0, min(offset, n-1))
+	clamp := func(v int) int { return max(0, min(v, n-1)) }
 	id := ""
 	if s.Cid != nil {
 		id = fmt.Sprint(s.Cid)
 	}
-	return id, offset
+	return view{id, clamp(num(s.Offset)), cellOf(clamp(num(s.Cell))), num(s.Tick)}
 }
 
 func main() {
 	if !map[string]bool{"whole": true, "rows": true, "replace": true, "signals": true, "window": true}[mode] {
 		log.Fatalf("unknown PATCH=%s", mode)
+	}
+	if fetchMode != "stream" && fetchMode != "get" {
+		log.Fatalf("unknown DBMON_WINDOW_FETCH=%s", fetchMode)
 	}
 	if brotliImpl != "sdk" && brotliImpl != "cbrotli" {
 		log.Fatalf("unknown DBMON_BROTLI_IMPL=%s", brotliImpl)
@@ -505,19 +649,41 @@ func main() {
 		json.NewEncoder(w).Encode(ticks)
 	})
 	mux.HandleFunc("POST /view", func(w http.ResponseWriter, r *http.Request) {
-		id, offset := viewOf(r)
+		v := viewOf(r)
 		hubMu.Lock()
-		c := byID[id]
-		if c != nil {
-			c.ch <- msg{scrollTo: offset}
+		c := byID[v.id]
+		if c != nil && getSlices {
+			c.ch <- msg{catchUp: true, cell: v.cell, since: v.tick, scrollTo: -1}
+		} else if c != nil {
+			c.ch <- msg{scrollTo: v.offset}
 		}
 		hubMu.Unlock()
 		w.WriteHeader(204)
 	})
+	// GET slices: a cell's slice as HTML for Datastar to morph in, compressed
+	// on its own at the stream's settings.
+	mux.HandleFunc("GET /slice", func(w http.ResponseWriter, r *http.Request) {
+		if !getSlices {
+			http.NotFound(w, r)
+			return
+		}
+		cell, _ := strconv.Atoi(r.URL.Query().Get("cell"))
+		html := slice(cellOf(max(0, cell)))
+		w.Header().Set("content-type", "text/html; charset=utf-8")
+		w.Header().Set("cache-control", "no-store")
+		w.Header().Set("vary", "accept-encoding")
+		if acceptsBr.MatchString(r.Header.Get("accept-encoding")) {
+			w.Header().Set("content-encoding", "br")
+			w.Write(brotliBytes([]byte(html), brQ, brWin))
+			return
+		}
+		io.WriteString(w, html)
+	})
 	mux.HandleFunc("/updates", func(w http.ResponseWriter, r *http.Request) {
 		c := &client{ch: make(chan msg, 4096)}
 		if mode == "window" {
-			c.id, c.offset = viewOf(r)
+			v := viewOf(r)
+			c.id, c.offset, c.cell, c.tick = v.id, v.offset, v.cell, v.tick
 		}
 		var sse *datastar.ServerSentEventGenerator
 		br := acceptsBr.MatchString(r.Header.Get("accept-encoding"))

@@ -67,6 +67,11 @@ export const APPS = {
   "dbmon-hypermedia-window-overscan20": { dir: "dbmon-hypermedia", port: 3018, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "20" } },
   // The same, a scroll sent as only the rows that entered and left.
   "dbmon-hypermedia-window-delta": { dir: "dbmon-hypermedia", port: 3030, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_SCROLL_PATCH: "delta" } },
+  // The window with its slices fetched (GET /slice per 20-row cell) instead
+  // of pushed down the stream, each slice preloading the cells either side;
+  // overscan 20, as the server-component window. The stream still carries
+  // the live updates.
+  "dbmon-hypermedia-window-get": { dir: "dbmon-hypermedia", port: 3050, stream: "/updates", env: { PATCH: "window", DBMON_OVERSCAN: "20", DBMON_WINDOW_FETCH: "get" } },
   // The Solid app rendered in the browser from streamed JSON: rows swapped
   // per object (`/spa`) or reconciled into a store by id (`/spa-store`).
   "dbmon-spa": { dir: "dbmon-solid", port: 3023, path: "/spa", stream: "/_server/live/getDatabaseData-84a14cde" },
@@ -95,6 +100,7 @@ export const APPS = {
     "-window": { port: 3037, env: { PATCH: "window" } },
     "-window-overscan": { port: 3039, env: { PATCH: "window", DBMON_OVERSCAN: "40" } },
     "-window-delta": { port: 3040, env: { PATCH: "window", DBMON_OVERSCAN: "40", DBMON_SCROLL_PATCH: "delta" } },
+    "-window-get": { port: 3051, env: { PATCH: "window", DBMON_OVERSCAN: "20", DBMON_WINDOW_FETCH: "get" } },
     "-cbrotli": { port: 3041, env: { DBMON_BROTLI_IMPL: "cbrotli" } },
     "-rows-cbrotli": { port: 3042, env: { PATCH: "rows", DBMON_BROTLI_IMPL: "cbrotli" } },
     "-signals-cbrotli": { port: 3046, env: { PATCH: "signals", DBMON_BROTLI_IMPL: "cbrotli" } },

@@ -17,7 +17,9 @@
 //            server pushes the rendered slice down the one open stream and
 //            then the changed rows within it. DBMON_SCROLL_PATCH=delta sends
 //            a scroll as only the rows that entered and left the slice
-//            (prepend, append, remove) instead of morphing the whole slice
+//            (prepend, append, remove) instead of morphing the whole slice.
+//            DBMON_WINDOW_FETCH=get fetches slices instead (see "window
+//            mode, GET slices" below)
 // rows, replace and signals are the usual next step when measuring says the
 // whole region costs too much: narrow the patch to what changed. window is
 // how a hypermedia app would show a big live table at all.
@@ -37,6 +39,10 @@ if (!["whole", "rows", "replace", "signals", "window"].includes(MODE)) throw new
 const WINDOW = Number(process.env.DBMON_WINDOW || 40);
 const OVERSCAN = Number(process.env.DBMON_OVERSCAN || 0);
 const SCROLL_PATCH = process.env.DBMON_SCROLL_PATCH || "morph";
+const FETCH = process.env.DBMON_WINDOW_FETCH || "stream"; // window mode: "stream" or "get"
+if (!["stream", "get"].includes(FETCH)) throw new Error(`unknown DBMON_WINDOW_FETCH=${FETCH}`);
+const GET = MODE === "window" && FETCH === "get";
+const STEP = Number(process.env.DBMON_STEP || 20); // GET slices: rows per grid cell
 const ROW_HEIGHT = 37; // px; window mode pins each row to it so offsets are exact
 const dir = new URL(".", import.meta.url).pathname;
 const css = readFileSync(dir + "app.css", "utf8");
@@ -139,10 +145,61 @@ function scrollEvent(dbs, before, after) {
   return event;
 }
 
+// ---- window mode, GET slices (DBMON_WINDOW_FETCH=get) ----
+// The same window with its rows fetched, not pushed: a scroll into a new
+// grid cell (STEP rows) GETs that cell's slice, plain HTML that Datastar
+// morphs in, and every slice patches in a <link rel="preload"> for each of
+// the next DBMON_AHEAD cells (default 2) in the direction the page is
+// scrolling (the `_dir` signal picks between the cells above and below), so
+// a scroll that keeps going finds the next slice already fetched. A slice URL is the same for every client (no signals in
+// it), which is what lets a preload stand in for the fetch. The cost is what
+// the stream saves: each slice is its own request and its own brotli
+// context, where a push down the stream reuses the context's window.
+//
+// The stream stays open for the live updates. A slice carries the tick it
+// was rendered at; once it is on the page it posts its cell and that tick
+// to /view, and the server sends the rows of the cell that changed since
+// (a preloaded slice can be a few ticks old), then each tick's changes.
+let tickNo = 0;
+const history = []; // the last 64 ticks: { tick, changedAt }
+const cellOf = offset => Math.floor(offset / STEP) * STEP;
+// The rows a cell's slice holds, as the Solid server-component window cuts
+// them: OVERSCAN rows above the cell, and the viewport plus STEP rows below
+// its first row, so a scroll within the cell never uncovers a row.
+const cellRange = (cell, n) => [Math.max(0, cell - OVERSCAN), Math.min(n, cell + WINDOW + STEP)];
+const sliceUrl = cell => `/slice?cell=${cell}&datastar=%7B%7D`; // as Datastar's @get sends it, with an empty payload
+const AHEAD = Number(process.env.DBMON_AHEAD || 2); // GET slices: cells preloaded ahead
+const preloadLink = (cell, n) => {
+  const url = c => (c >= 0 && c < n ? `'${sliceUrl(c)}'` : "null");
+  let h = "";
+  for (let k = 1; k <= AHEAD; k++)
+    h += `<link id="slice-ahead-${k}" rel="preload" as="fetch" crossorigin data-attr:href="$_dir < 0 ? ${url(cell - k * STEP)} : ${url(cell + k * STEP)}">`;
+  return h;
+};
+function slice(dbs, cell) {
+  const [from, to] = cellRange(cell, dbs.length);
+  return (
+    renderTable(dbs.slice(from, to), { offset: from }).replace(/ data-attr:style="[^"]*"/, "") +
+    `<div id="slice-meta" data-init="$cell = ${cell}; $tick = ${tickNo}; @post('/view', {requestCancellation: 'disabled'})"></div>` +
+    preloadLink(cell, dbs.length)
+  );
+}
+// The rows of a client's cell that changed after `since`, or all of them if
+// that tick is no longer in the history.
+function catchUp(dbs, client, since) {
+  const [from, to] = cellRange(client.cell, dbs.length);
+  const known = history.length && since >= history[0].tick - 1;
+  const at = new Set();
+  if (known) for (const h of history) if (h.tick > since) for (const i of h.changedAt) i >= from && i < to && at.add(i);
+  const rows = known ? [...at].sort((a, b) => a - b).map(i => renderRow(dbs[i])) : dbs.slice(from, to).map(renderRow);
+  return rows.length ? patchEvent(rows.join("")) : null;
+}
+
 // What a client that just connected gets: everything it shows, as of now
 // (the page it loaded may be a tick or two old).
 const snapshot = (dbs, client) =>
   MODE === "signals" ? signalEvent(signalsOf(dbs))
+  : GET ? catchUp(dbs, client, client.tick)
   : MODE === "window" ? windowEvent(dbs, client.offset)
   : patchEvent(renderTable(dbs));
 
@@ -152,7 +209,7 @@ function tickEvent(dbs, changedAt, client) {
   const changed = changedAt.map(i => dbs[i]);
   if (MODE === "whole") return patchEvent(renderTable(dbs));
   if (MODE === "window") {
-    const [from, to] = rangeOf(client.offset, dbs.length);
+    const [from, to] = GET ? cellRange(client.cell, dbs.length) : rangeOf(client.offset, dbs.length);
     const shown = changedAt.filter(i => i >= from && i < to);
     return shown.length ? patchEvent(shown.map(i => renderRow(dbs[i])).join("")) : null;
   }
@@ -183,6 +240,8 @@ function startLoop() {
       const changedAt = [];
       dbs.forEach((db, i) => db !== prev[i] && changedAt.push(i));
       prev = dbs;
+      history.push({ tick: ++tickNo, changedAt });
+      if (history.length > 64) history.shift();
       if (MODE === "window") {
         for (const client of clients) {
           const event = tickEvent(dbs, changedAt, client);
@@ -202,7 +261,8 @@ function subscribe(client) {
   clients.add(client);
   if (client.id) byId.set(client.id, client);
   console.log("clients:", clients.size);
-  client.send(Buffer.from(snapshot(currentDatabases(), client)));
+  const first = snapshot(currentDatabases(), client);
+  if (first) client.send(Buffer.from(first));
   if (!loop) startLoop();
   return () => {
     clients.delete(client);
@@ -217,8 +277,26 @@ function subscribe(client) {
 
 function page() {
   const dbs = currentDatabases();
-  let body;
-  if (MODE === "window") {
+  let body, head = "";
+  if (GET) {
+    // The window with slices fetched by cell (see "window mode, GET slices").
+    // A scroll into a new cell GETs its slice; the slice's own markup posts
+    // its cell and tick to /view (slice-meta) and refreshes the preloads
+    // for the cells either side.
+    const id = Math.random().toString(36).slice(2);
+    const cell = `Math.floor(el.scrollTop / ${ROW_HEIGHT * STEP}) * ${STEP}`;
+    const view = `$_want !== ${cell} && ($_dir = ${cell} > $_want ? 1 : -1, $_want = ${cell}, @get('/slice?cell=' + $_want, {payload: {}}))`;
+    const [from, to] = cellRange(0, dbs.length);
+    head = preloadLink(0, dbs.length) + "\n";
+    body = `<style>#dbmon tr{height:${ROW_HEIGHT}px}#dbmon td{white-space:nowrap}</style>
+<div id="viewport" style="height:100vh;overflow-y:auto" data-signals:cid="'${id}'" data-signals:cell="0" data-signals:tick="${tickNo}" data-signals:_want="0" data-signals:_dir="1"
+  data-on:scroll__throttle.32ms="${view}" data-on:scrollend="${view}">
+<div style="position:relative;height:${dbs.length * ROW_HEIGHT}px" data-init="@get('/updates')">
+${renderTable(dbs.slice(from, to), { offset: from }).replace(/ data-attr:style="[^"]*"/, "")}
+</div>
+</div>
+<div id="slice-meta"></div>`;
+  } else if (MODE === "window") {
     // A viewport over the whole table: a spacer as tall as every row, the
     // rendered slice positioned in it. One stream stays open; scrolling posts
     // the offset (throttled to 32 ms, plus a last one on scrollend) and the
@@ -247,7 +325,7 @@ ${renderTable(dbs)}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DBMon (Datastar)</title>
 <style>${css}</style>
-<script type="module" src="/datastar.js"></script>
+${head}<script type="module" src="/datastar.js"></script>
 </head>
 <body>
 ${body}
@@ -258,11 +336,12 @@ ${body}
 // A window-mode client's signals: Datastar sends them as the `datastar`
 // query parameter on a GET and as the JSON body of a POST.
 function viewOf(json) {
+  const clamp = v => Math.max(0, Math.min(Math.floor(Number(v) || 0), currentDatabases().length - 1));
   try {
-    const { cid, offset } = JSON.parse(json || "{}");
-    return { id: String(cid ?? ""), offset: Math.max(0, Math.min(Math.floor(Number(offset) || 0), currentDatabases().length - 1)) };
+    const { cid, offset, cell, tick } = JSON.parse(json || "{}");
+    return { id: String(cid ?? ""), offset: clamp(offset), cell: cellOf(clamp(cell)), tick: Number(tick) || 0 };
   } catch {
-    return { id: "", offset: 0 };
+    return { id: "", offset: 0, cell: 0, tick: 0 };
   }
 }
 
@@ -320,15 +399,46 @@ const server = http.createServer((req, res) => {
     let body = "";
     req.on("data", c => (body += c));
     req.on("end", () => {
-      const { id, offset } = viewOf(body);
+      const { id, offset, cell, tick } = viewOf(body);
       const client = byId.get(id);
-      if (client && client.offset !== offset) {
+      if (GET) {
+        // A slice is on the page: this client's ticks now cover its cell,
+        // starting with what changed since the slice was rendered.
+        if (client) {
+          client.cell = cell;
+          const event = catchUp(currentDatabases(), client, tick);
+          if (event) client.send(Buffer.from(event));
+        }
+      } else if (client && client.offset !== offset) {
         client.send(Buffer.from(scrollEvent(currentDatabases(), client.offset, offset)));
         client.offset = offset;
       }
       res.writeHead(204).end();
     });
     return;
+  }
+  if (GET && url.pathname === "/slice") {
+    // A cell's slice, as HTML for Datastar to morph in, compressed on its own
+    // at the update stream's settings.
+    const html = slice(currentDatabases(), cellOf(Math.max(0, Number(url.searchParams.get("cell")) || 0)));
+    const br = acceptsBr(req);
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      vary: "accept-encoding",
+      ...(br ? { "content-encoding": "br" } : {})
+    });
+    return res.end(
+      br
+        ? zlib.brotliCompressSync(html, {
+            params: {
+              [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,
+              [zlib.constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY,
+              [zlib.constants.BROTLI_PARAM_LGWIN]: BROTLI_LGWIN
+            }
+          })
+        : html
+    );
   }
   if (url.pathname === "/updates") {
     const br = acceptsBr(req);

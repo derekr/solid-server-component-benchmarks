@@ -38,7 +38,9 @@ window)
   # Windowed tables, the way a real app shows a big live one: the Solid SPA
   # window (every row as data, TanStack Virtual), the Solid server-component
   # window and the Datastar window (the server renders the slice).
-  W=dbmon-spa-window,dbmon-sc-window,dbmon-hypermedia-window
+  # dbmon-hypermedia-window-get fetches its slices (GET, preloaded ahead)
+  # instead of having them pushed down the stream.
+  W=dbmon-spa-window,dbmon-sc-window,dbmon-hypermedia-window,dbmon-hypermedia-window-get
   APPS=$W node dbmon-client.mjs 400 0.1 5 4 7 > $OUT/window-client.jsonl
   for r in 2000 10000; do APPS=$W node dbmon-client.mjs $r 0.1 5 4 3; done >> $OUT/window-client.jsonl
   APPS=$W node dbmon-load.mjs 400 4 5 > $OUT/window-load.jsonl
