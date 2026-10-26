@@ -1,35 +1,67 @@
-{"round":1,"app":"hn-sc","page":"story","score":95,"fcp":1661,"lcp":2111,"tbt":219,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":1,"app":"hn-spa","page":"story","score":87,"fcp":2259,"lcp":2559,"tbt":338,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":2,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":6,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":2,"app":"hn-spa","page":"story","score":91,"fcp":2553,"lcp":2565,"tbt":165,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":3,"app":"hn-sc","page":"story","score":97,"fcp":2103,"lcp":2103,"tbt":3,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":3,"app":"hn-spa","page":"story","score":91,"fcp":2556,"lcp":2556,"tbt":175,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":4,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":5,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":4,"app":"hn-spa","page":"story","score":91,"fcp":2556,"lcp":2556,"tbt":171,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":5,"app":"hn-sc","page":"story","score":97,"fcp":2104,"lcp":2104,"tbt":1,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":5,"app":"hn-spa","page":"story","score":92,"fcp":2557,"lcp":2557,"tbt":146,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":6,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":0,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":6,"app":"hn-spa","page":"story","score":91,"fcp":2554,"lcp":2554,"tbt":152,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":7,"app":"hn-sc","page":"story","score":97,"fcp":2106,"lcp":2106,"tbt":3,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":7,"app":"hn-spa","page":"story","score":92,"fcp":2553,"lcp":2553,"tbt":148,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":8,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":0,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":8,"app":"hn-spa","page":"story","score":91,"fcp":2555,"lcp":2555,"tbt":157,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":9,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":0,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":9,"app":"hn-spa","page":"story","score":92,"fcp":2556,"lcp":2556,"tbt":147,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":10,"app":"hn-sc","page":"story","score":97,"fcp":2104,"lcp":2104,"tbt":2,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":10,"app":"hn-spa","page":"story","score":91,"fcp":2554,"lcp":2554,"tbt":168,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":11,"app":"hn-sc","page":"story","score":97,"fcp":2107,"lcp":2107,"tbt":2,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":11,"app":"hn-spa","page":"story","score":92,"fcp":2553,"lcp":2553,"tbt":141,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":12,"app":"hn-sc","page":"story","score":97,"fcp":2106,"lcp":2106,"tbt":0,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":12,"app":"hn-spa","page":"story","score":91,"fcp":2556,"lcp":2556,"tbt":179,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":13,"app":"hn-sc","page":"story","score":97,"fcp":2105,"lcp":2105,"tbt":1,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":13,"app":"hn-spa","page":"story","score":91,"fcp":2555,"lcp":2555,"tbt":154,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":14,"app":"hn-sc","page":"story","score":97,"fcp":2104,"lcp":2104,"tbt":1,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":14,"app":"hn-spa","page":"story","score":92,"fcp":2560,"lcp":2560,"tbt":124,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
-{"round":15,"app":"hn-sc","page":"story","score":97,"fcp":2104,"lcp":2104,"tbt":1,"cls":0,"totalKB":241,"docKB":193,"jsKB":45}
-{"round":15,"app":"hn-spa","page":"story","score":91,"fcp":2554,"lcp":2554,"tbt":156,"cls":0,"totalKB":338,"docKB":299.3,"jsKB":36.9}
+{"round":1,"app":"hn-sc","page":"story","score":80,"fcp":1666,"lcp":2409,"tbt":684,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":1,"app":"hn-spa","page":"story","score":77,"fcp":2605,"lcp":2676,"tbt":602,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":1,"app":"hn-datastar","page":"story","score":86,"fcp":1665,"lcp":1861,"tbt":507,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":1,"app":"hn-datastar-cv","page":"story","score":98,"fcp":1656,"lcp":1853,"tbt":111,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":2,"app":"hn-sc","page":"story","score":97,"fcp":2157,"lcp":2157,"tbt":64,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":2,"app":"hn-spa","page":"story","score":77,"fcp":2610,"lcp":2668,"tbt":614,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":2,"app":"hn-datastar","page":"story","score":86,"fcp":1860,"lcp":1860,"tbt":496,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":2,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1853,"lcp":1853,"tbt":147,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":3,"app":"hn-sc","page":"story","score":94,"fcp":2165,"lcp":2165,"tbt":177,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":3,"app":"hn-spa","page":"story","score":77,"fcp":2607,"lcp":2668,"tbt":629,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":3,"app":"hn-datastar","page":"story","score":84,"fcp":1878,"lcp":1925,"tbt":554,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":3,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1870,"lcp":1870,"tbt":127,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":4,"app":"hn-sc","page":"story","score":97,"fcp":2107,"lcp":2107,"tbt":48,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":4,"app":"hn-spa","page":"story","score":75,"fcp":2602,"lcp":2711,"tbt":720,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":4,"app":"hn-datastar","page":"story","score":86,"fcp":1859,"lcp":1898,"tbt":478,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":4,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1849,"lcp":1849,"tbt":139,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":5,"app":"hn-sc","page":"story","score":93,"fcp":2181,"lcp":2188,"tbt":223,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":5,"app":"hn-spa","page":"story","score":77,"fcp":2620,"lcp":2694,"tbt":602,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":5,"app":"hn-datastar","page":"story","score":88,"fcp":1855,"lcp":1876,"tbt":415,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":5,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1859,"lcp":1859,"tbt":124,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":6,"app":"hn-sc","page":"story","score":86,"fcp":2162,"lcp":2238,"tbt":409,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":6,"app":"hn-spa","page":"story","score":74,"fcp":2605,"lcp":2709,"tbt":734,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":6,"app":"hn-datastar","page":"story","score":88,"fcp":1845,"lcp":1880,"tbt":429,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":6,"app":"hn-datastar-cv","page":"story","score":98,"fcp":1849,"lcp":1849,"tbt":106,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":7,"app":"hn-sc","page":"story","score":96,"fcp":2167,"lcp":2179,"tbt":93,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":7,"app":"hn-spa","page":"story","score":77,"fcp":2612,"lcp":2717,"tbt":615,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":7,"app":"hn-datastar","page":"story","score":87,"fcp":1924,"lcp":1924,"tbt":453,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":7,"app":"hn-datastar-cv","page":"story","score":95,"fcp":1858,"lcp":1899,"tbt":201,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":8,"app":"hn-sc","page":"story","score":96,"fcp":2149,"lcp":2149,"tbt":88,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":8,"app":"hn-spa","page":"story","score":76,"fcp":2620,"lcp":2675,"tbt":674,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":8,"app":"hn-datastar","page":"story","score":90,"fcp":1867,"lcp":1889,"tbt":367,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":8,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1847,"lcp":1847,"tbt":158,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":9,"app":"hn-sc","page":"story","score":94,"fcp":2157,"lcp":2191,"tbt":163,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":9,"app":"hn-spa","page":"story","score":76,"fcp":2612,"lcp":2689,"tbt":653,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":9,"app":"hn-datastar","page":"story","score":86,"fcp":1857,"lcp":1878,"tbt":488,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":9,"app":"hn-datastar-cv","page":"story","score":96,"fcp":1868,"lcp":1868,"tbt":165,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":10,"app":"hn-sc","page":"story","score":94,"fcp":2178,"lcp":2178,"tbt":186,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":10,"app":"hn-spa","page":"story","score":76,"fcp":2604,"lcp":2690,"tbt":643,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":10,"app":"hn-datastar","page":"story","score":88,"fcp":1873,"lcp":1886,"tbt":418,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":10,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1898,"lcp":1898,"tbt":111,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":11,"app":"hn-sc","page":"story","score":96,"fcp":2162,"lcp":2166,"tbt":89,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":11,"app":"hn-spa","page":"story","score":73,"fcp":2613,"lcp":2752,"tbt":818,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":11,"app":"hn-datastar","page":"story","score":85,"fcp":1850,"lcp":1850,"tbt":535,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":11,"app":"hn-datastar-cv","page":"story","score":97,"fcp":1849,"lcp":1849,"tbt":133,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":12,"app":"hn-sc","page":"story","score":92,"fcp":2162,"lcp":2217,"tbt":237,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":12,"app":"hn-spa","page":"story","score":75,"fcp":2611,"lcp":2694,"tbt":669,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":12,"app":"hn-datastar","page":"story","score":91,"fcp":1850,"lcp":1850,"tbt":324,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":12,"app":"hn-datastar-cv","page":"story","score":98,"fcp":1848,"lcp":1848,"tbt":103,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":13,"app":"hn-sc","page":"story","score":90,"fcp":2163,"lcp":2222,"tbt":284,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":13,"app":"hn-spa","page":"story","score":77,"fcp":2604,"lcp":2678,"tbt":621,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":13,"app":"hn-datastar","page":"story","score":86,"fcp":1858,"lcp":1858,"tbt":491,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":13,"app":"hn-datastar-cv","page":"story","score":98,"fcp":1852,"lcp":1852,"tbt":77,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":14,"app":"hn-sc","page":"story","score":94,"fcp":2173,"lcp":2199,"tbt":166,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":14,"app":"hn-spa","page":"story","score":79,"fcp":2621,"lcp":2686,"tbt":533,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":14,"app":"hn-datastar","page":"story","score":87,"fcp":1858,"lcp":1858,"tbt":465,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":14,"app":"hn-datastar-cv","page":"story","score":94,"fcp":1852,"lcp":1852,"tbt":226,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
+{"round":15,"app":"hn-sc","page":"story","score":93,"fcp":2175,"lcp":2242,"tbt":202,"cls":0,"totalKB":242,"docKB":193,"jsKB":45.3}
+{"round":15,"app":"hn-spa","page":"story","score":77,"fcp":2604,"lcp":2678,"tbt":637,"cls":0,"totalKB":339,"docKB":299.3,"jsKB":37.1}
+{"round":15,"app":"hn-datastar","page":"story","score":83,"fcp":1846,"lcp":1866,"tbt":607,"cls":0,"totalKB":205,"docKB":189.9,"jsKB":13.2}
+{"round":15,"app":"hn-datastar-cv","page":"story","score":98,"fcp":1873,"lcp":1873,"tbt":75,"cls":0,"totalKB":205,"docKB":190,"jsKB":13.2}
 
 | page | app | runs | score | TBT ms | FCP ms | LCP ms | CLS | total kB | doc kB | JS kB |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| story | hn-sc | 15 | 97 | 1 | 2105 | 2105 | 0 | 241 | 193 | 45 |
-| story | hn-spa | 15 | 91 | 156 | 2555 | 2556 | 0 | 338 | 299.3 | 36.9 |
+| story | hn-sc | 15 | 94 | 177 | 2162 | 2188 | 0 | 242 | 193 | 45.3 |
+| story | hn-spa | 15 | 77 | 637 | 2610 | 2689 | 0 | 339 | 299.3 | 37.1 |
+| story | hn-datastar | 15 | 86 | 478 | 1858 | 1876 | 0 | 205 | 189.9 | 13.2 |
+| story | hn-datastar-cv | 15 | 97 | 127 | 1852 | 1853 | 0 | 205 | 190 | 13.2 |

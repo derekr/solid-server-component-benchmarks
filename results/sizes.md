@@ -1,9 +1,9 @@
 
-> solid-server-components-benchmarks@ sizes /tmp/claude-0/-home-claude-solid/02161daa-5f89-56d6-b825-ff44d709d37e/scratchpad/sc-benchmarks
+> solid-server-components-benchmarks@ sizes /home/claude/solid-server-component-benchmarks
 > pnpm --filter sizes measure
 
 
-> sizes@ measure /tmp/claude-0/-home-claude-solid/02161daa-5f89-56d6-b825-ff44d709d37e/scratchpad/sc-benchmarks/sizes
+> sizes@ measure /home/claude/solid-server-component-benchmarks/sizes
 > node measure.mjs
 
 | Entry | Eager JS (brotli) | Minified | Lazy, not counted (brotli) |
