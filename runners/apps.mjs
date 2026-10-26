@@ -139,13 +139,23 @@ export function shapingProxy(port, target, { rttMs, mbps } = NET ?? {}) {
   const oneWay = (rttMs || 0) / 2;
   const bytesPerMs = mbps ? (mbps * 1e6) / 8 / 1000 : Infinity;
   // One queue per direction for the whole link: a chunk leaves once the
-  // chunks before it (on any connection) have.
+  // chunks before it (on any connection) have, and arrives `oneWay` later.
+  // Delivery is strictly in queue order from one timer (separate timers can
+  // fire out of order and corrupt a stream).
   const link = () => {
-    let free = 0;
+    let free = 0, timer = null;
+    const queue = [];
+    const drain = () => {
+      timer = null;
+      const now = performance.now();
+      while (queue.length && queue[0].at <= now) queue.shift().send();
+      if (queue.length) timer = setTimeout(drain, queue[0].at - now);
+    };
     return (len, send) => {
       const now = performance.now();
       free = Math.max(now, free) + len / bytesPerMs;
-      setTimeout(send, free + oneWay - now);
+      queue.push({ at: free + oneWay, send });
+      if (!timer) timer = setTimeout(drain, free + oneWay - now);
     };
   };
   const down = link(), up = link();
