@@ -7,6 +7,9 @@
 // The Datastar apps are multi-page: the click loads a new document, so the
 // click time is kept in sessionStorage and read back from the new page.
 //
+// Pages load through the NET profile (apps.mjs, default 70 ms RTT and
+// 10 Mbit/s), so the time includes fetching the data and any code.
+//
 // NAV=real measures the navigation as a person makes it, with the platform's
 // help: the HTTP cache is on (the feed page's script and stylesheet are
 // reused), and the pointer rests on the link for HOVER_MS (default 300) before
@@ -20,8 +23,7 @@
 // The feed page reads the live HN API; if that is unreachable the feed shows
 // its error state, but the app is still running and the story itself comes
 // from the cached snapshot, so the navigation measured is the same.
-import { chromium } from "playwright";
-import { start, stop, url } from "./apps.mjs";
+import { start, stop, url, launch, netLabel } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 5);
 const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-sc-toggles,hn-spa-toggles,hn-qwik,hn-datastar,hn-datastar-cv,hn-datastar-toggles,hn-datastar-window").split(",");
@@ -110,7 +112,7 @@ async function once(browser, base) {
 
 const servers = [];
 for (const n of NAMES) servers.push(await start(n));
-const browser = await chromium.launch();
+const browser = await launch();
 const runs = Object.fromEntries(NAMES.map(n => [n, []]));
 try {
   for (const n of NAMES) await once(browser, url(n)); // warm-up
@@ -120,7 +122,7 @@ try {
   for (const s of servers) await stop(s);
 }
 const med = xs => [...xs].sort((a, b) => a - b)[xs.length >> 1];
-console.log(`client navigation to the story, cpu ${RATE}x, ${RUNS} runs, medians` + (REAL ? `, cache on, ${HOVER_MS} ms hover and an 80 ms press` : ", cache off, scripted click"));
+console.log(`client navigation to the story, cpu ${RATE}x, ${netLabel()}, ${RUNS} runs, medians` + (REAL ? `, cache on, ${HOVER_MS} ms hover and an 80 ms press` : ", cache off, scripted click"));
 for (const n of NAMES)
   console.log(
     n.padEnd(16),

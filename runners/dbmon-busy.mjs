@@ -18,7 +18,7 @@
 //     server's simulation ticked (/__dbmon/ticks), p50/p95/p99/max. Same
 //     machine, same clock.
 //   window apps (the Datastar windows, the SPA and server-component
-//     windows): a browser (1x CPU, no added latency) jumps 20 times to
+//     windows): a browser (1x CPU, behind the NET profile in apps.mjs) jumps 20 times to
 //     unseen rows; jumpMs is from setting scrollTop until the new rows are
 //     on the page, p50/p95/max. That is the server's /view handling, the
 //     slice render and the push, plus the client's patch.
@@ -27,7 +27,7 @@ import http from "node:http";
 import zlib from "node:zlib";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { APPS, start, stop, cpuMs, launch } from "./apps.mjs";
+import { APPS, start, stop, cpuMs, launch, page as pageUrl, netLabel } from "./apps.mjs";
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -108,11 +108,11 @@ if (process.argv[2] === "--viewers") {
     return Math.max(0, top - a) + Math.max(0, b - bottom) - Math.max(0, top - b) - Math.max(0, a - bottom);
   };
 
-  async function jumps(port, path) {
+  async function jumps(name) {
     const browser = await launch();
     try {
       const page = await browser.newPage();
-      await page.goto(`http://localhost:${port}${path}`, { waitUntil: "commit" });
+      await page.goto(pageUrl(name), { waitUntil: "commit" });
       await page.waitForSelector("td.dbname", { timeout: 30000 });
       await page.waitForTimeout(1500);
       await page.evaluate(`window.__blank = ${blankPx}`);
@@ -150,11 +150,11 @@ if (process.argv[2] === "--viewers") {
     await new Promise(r => bg.stdout.once("data", r));
     try {
       await sleep(3000);
-      const out = { app: name, viewers: n, rows: +rows, ...(isWindow ? { scrollsPerSec: scrolls } : {}) };
+      const out = { app: name, viewers: n, rows: +rows, ...(isWindow ? { scrollsPerSec: scrolls, net: netLabel() } : {}) };
       const c0 = cpuMs(server.pid), t0 = Date.now();
       if (isWindow) {
         // A server too busy to serve the page in 30 s is a result, not a crash.
-        const j = await jumps(app.port, app.path ?? "/").catch(e => (e.name === "TimeoutError" ? null : Promise.reject(e)));
+        const j = await jumps(name).catch(e => (e.name === "TimeoutError" ? null : Promise.reject(e)));
         if (j) out.jumpMs = { p50: pct(j, 0.5), p95: pct(j, 0.95), max: Math.round(j.at(-1)) };
         else out.pageTimedOut = true;
       } else {

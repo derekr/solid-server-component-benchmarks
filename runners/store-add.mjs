@@ -9,8 +9,12 @@
 // add, shows "Adding…" from a local signal meanwhile, and changes the count
 // when the server's patch arrives, so its cart time includes a round trip.
 //
+// The page loads straight from the app, not through the NET proxy
+// (apps.mjs): `rttMs` is this runner's network, Chrome's latency emulation
+// on every request, and the timed click comes after the page has loaded.
+//
 // usage: node store-add.mjs [rounds=7] [rttMs=0,150] [cpuRate=4] [apps=store-sc,store-spa,store-datastar]
-import { start, stop, url, launch } from "./apps.mjs";
+import { start, stop, direct as url, launch } from "./apps.mjs";
 
 const ROUNDS = Number(process.argv[2] || 7);
 const RTTS = (process.argv[3] || "0,150").split(",").map(Number);

@@ -23,13 +23,17 @@
 // simulation is paused and every row on the page is checked against the
 // server's (`wrongRows`, of `checkedRows`).
 //
+// loadMs is the same run's load (navigation start to the table and to the
+// first live change), loaded through the NET profile (apps.mjs); the
+// measured window comes after it and is steady state.
+//
 // heapMB is the page's live JS heap after a forced GC at the end of the
 // measured window, and heapGrowthMB how much that grew over the window (a
 // page holding on to every update grows; one that lets them go stays flat).
 //
 // LAYOUT=fixed adds `table { table-layout: fixed }` to every page, to show
 // how much of each column is the table's own layout.
-import { start, stop, page as pageUrl, cpuMs, launch, checkRows } from "./apps.mjs";
+import { start, stop, page as pageUrl, cpuMs, launch, checkRows, liveTimer, netLabel } from "./apps.mjs";
 import { traceWindow } from "./trace.mjs";
 
 const [rows = "400", change = "0.1", tps = "5", rate = "4", rounds = "3", secs = "10"] = process.argv.slice(2);
@@ -38,7 +42,7 @@ const env = { DBMON_ROWS: String(+rows / 2), DBMON_MUTATIONS: change, DBMON_FPS:
 async function once(name) {
   const server = await start(name, env);
   const browser = await launch();
-  const out = { app: name, rows: +rows, change: +change, ticksPerSec: +tps, cpuRate: +rate, ...(process.env.LAYOUT ? { layout: process.env.LAYOUT } : {}) };
+  const out = { app: name, rows: +rows, change: +change, ticksPerSec: +tps, cpuRate: +rate, net: netLabel(), ...(process.env.LAYOUT ? { layout: process.env.LAYOUT } : {}) };
   try {
     const page = await browser.newPage();
     const cdp = await page.context().newCDPSession(page);
@@ -46,6 +50,7 @@ async function once(name) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: +rate });
     let wire = 0;
     cdp.on("Network.dataReceived", e => (wire += e.encodedDataLength));
+    await page.addInitScript(liveTimer);
     const tLoad = Date.now();
     await page.goto(pageUrl(name), { waitUntil: "commit" });
     // Ask the page a trivial question; a frozen main thread never answers.
@@ -79,6 +84,10 @@ async function once(name) {
       window.__t = 0;
       new MutationObserver(() => window.__t++).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
     });
+    // The load, from the same run (the measured window below is steady
+    // state, after it): ms from navigation start to the table, and to live.
+    const load = await page.evaluate(() => ({ table: window.__table, live: window.__live }));
+    out.loadMs = { table: Math.round(load.table), live: load.live == null ? null : Math.round(load.live) };
     await cdp.send("Performance.enable");
     const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(m => [m.name, m.value]));
     const heap = async () => (await cdp.send("HeapProfiler.collectGarbage"), (await metrics()).JSHeapUsedSize);

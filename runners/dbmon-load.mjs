@@ -1,5 +1,6 @@
 // The live table's first load: what each app ships and how soon the table is
-// on screen and live. Cold browser each round, 4x CPU by default.
+// on screen and live. Cold browser each round, 4x CPU by default, loaded
+// through the NET profile (apps.mjs), so the times include loading.
 //
 // usage: node dbmon-load.mjs [rows=400] [cpuRate=4] [rounds=5]
 //
@@ -8,7 +9,7 @@
 // "busy" is main-thread task time from navigation to live. Bytes are what
 // crossed the wire (brotli), by resource type. heapMB is the live JS heap
 // once the table is live, after a forced GC.
-import { start, stop, page as pageUrl, launch } from "./apps.mjs";
+import { start, stop, page as pageUrl, launch, liveTimer, netLabel } from "./apps.mjs";
 
 const [rows = "400", rate = "4", rounds = "5"] = process.argv.slice(2);
 const env = { DBMON_ROWS: String(+rows / 2), DBMON_MUTATIONS: "0.1", DBMON_FPS: "5" };
@@ -29,21 +30,7 @@ async function once(name) {
     cdp.on("Network.responseReceived", e => (req(e.requestId).type = e.type.toLowerCase()));
     cdp.on("Network.dataReceived", e => (req(e.requestId).got += e.encodedDataLength));
     cdp.on("Network.loadingFinished", e => (req(e.requestId).done = e.encodedDataLength));
-    await page.addInitScript(() => {
-      const t0 = performance.timeOrigin;
-      const frame = () => {
-        if (document.querySelector("td.dbname")) {
-          window.__table = performance.now();
-          new MutationObserver((records, mo) => {
-            if (records.some(r => (r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest("tr"))) {
-              window.__live = performance.now();
-              mo.disconnect();
-            }
-          }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
-        } else requestAnimationFrame(frame);
-      };
-      requestAnimationFrame(frame);
-    });
+    await page.addInitScript(liveTimer);
     await page.goto(pageUrl(name), { waitUntil: "commit" });
     await page.waitForFunction(() => window.__live, null, { timeout: 30000, polling: 100 });
     const m = Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(x => [x.name, x.value]));
@@ -57,6 +44,7 @@ async function once(name) {
       app: name,
       rows: +rows,
       cpuRate: +rate,
+      net: netLabel(),
       tableMs: Math.round(table),
       liveMs: Math.round(live),
       busyMs: Math.round(m.TaskDuration * 1000),

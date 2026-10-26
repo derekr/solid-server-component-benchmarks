@@ -1,11 +1,11 @@
 // The windowed live tables while you scroll. The SPA window has every row
 // already; the Datastar windows and the Solid server-component window ask
-// the server for theirs, so this runs behind a
-// round trip: a local TCP proxy holds every chunk for half of `rttMs` each
-// way. (Chrome's own latency emulation only delays responses, which a
-// request answered down an already-open stream skips.)
+// the server for theirs, so this runs behind the shared network profile
+// (apps.mjs), whose proxy holds every chunk for half the round trip each
+// way, including the patches pushed down an open stream.
 //
-// usage: node dbmon-scroll.mjs [rows=2000] [rttMs=70] [cpuRate=4] [pxPerSec=3600]
+// usage: node dbmon-scroll.mjs [rows=2000] [rttMs=NET's] [cpuRate=4] [pxPerSec=3600]
+//   rttMs sets the round trip for this run (the bandwidth stays NET's).
 //
 // fling: scrolls down at a steady `pxPerSec` (3,600 px/s is 60 px a frame)
 //   for 3 s and checks every frame how much of the viewport has no rendered
@@ -14,27 +14,13 @@
 //   are on the page (median, max).
 //
 // LAYOUT=fixed adds `table { table-layout: fixed }`, as in dbmon-client.
-import net from "node:net";
-import { APPS, start, stop, launch } from "./apps.mjs";
+import { NET, setNet, start, stop, launch, page as pageUrl } from "./apps.mjs";
 
-const [rows = "2000", rtt = "70", rate = "4", speed = "3600"] = process.argv.slice(2);
+const [rows = "2000", rttArg, rate = "4", speed = "3600"] = process.argv.slice(2);
+if (rttArg != null) setNet(`${rttArg},${NET?.mbps ?? 0}`);
+const rtt = NET?.rttMs ?? 0;
 const env = { DBMON_ROWS: String(+rows / 2), DBMON_MUTATIONS: "0.1", DBMON_FPS: "5", ...(process.env.DBMON_OVERSCAN ? { DBMON_OVERSCAN: process.env.DBMON_OVERSCAN } : {}) };
 const ROW_HEIGHT = 37;
-
-function delayProxy(port, target, oneWayMs) {
-  const server = net.createServer(client => {
-    const upstream = net.connect(target, "localhost");
-    const pipe = (from, to) => from.on("data", d => setTimeout(() => to.writable && to.write(d), oneWayMs));
-    pipe(client, upstream);
-    pipe(upstream, client);
-    // A side that closes closes the other after the same delay, so bytes
-    // already on their way (an aborted request that was sent) still arrive.
-    const later = other => () => setTimeout(() => other.destroy(), oneWayMs);
-    client.on("close", later(upstream)).on("error", later(upstream));
-    upstream.on("close", later(client)).on("error", later(client));
-  });
-  return new Promise(r => server.listen(port, () => r(server)));
-}
 
 // Blank px of the viewport: the parts not under the rendered table.
 const blankPx = () => {
@@ -46,14 +32,12 @@ const blankPx = () => {
 
 async function once(name) {
   const server = await start(name, env);
-  const proxyPort = APPS[name].port + 1000;
-  const proxy = await delayProxy(proxyPort, APPS[name].port, +rtt / 2);
   const browser = await launch();
   try {
     const page = await browser.newPage();
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: +rate });
-    await page.goto(`http://localhost:${proxyPort}${APPS[name].path ?? "/"}`, { waitUntil: "commit" });
+    await page.goto(pageUrl(name), { waitUntil: "commit" });
     await page.waitForSelector("td.dbname", { timeout: 30000 });
     if (process.env.LAYOUT === "fixed") await page.addStyleTag({ content: "table { table-layout: fixed }" });
     await page.waitForTimeout(2000);
@@ -95,7 +79,8 @@ async function once(name) {
     return {
       app: name,
       rows: +rows,
-      rttMs: +rtt,
+      rttMs: rtt,
+      mbps: NET?.mbps ?? null,
       cpuRate: +rate,
       flingFrames: fling.length,
       coveredPct: Math.round((100 * fling.filter(b => b === 0).length) / fling.length),
@@ -106,7 +91,6 @@ async function once(name) {
     };
   } finally {
     await browser.close();
-    proxy.close();
     await stop(server);
   }
 }

@@ -1,11 +1,12 @@
 // Main-thread time by category for a cold load (or a client navigation) of
 // the HN story page, from a Chromium trace. "script" is the number the
-// article quotes for the <details> variant.
+// article quotes for the <details> variant. Pages load through the NET
+// profile (apps.mjs); on a cold load, onScreen is the wall clock from
+// navigation start until the thread is on the page, loading included.
 //
 // usage: node script-time.mjs [cpuRate=4] [cold|nav] [runs=7] [apps=hn-sc,hn-spa]
 // Apps run interleaved, one fresh context per run; prints median and range.
-import { chromium } from "playwright";
-import { start, stop, url } from "./apps.mjs";
+import { start, stop, url, launch, netLabel } from "./apps.mjs";
 
 const RATE = Number(process.argv[2] || 4);
 const NAV = process.argv[3] === "nav";
@@ -33,6 +34,7 @@ async function one(browser, base) {
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: RATE });
   if (NAV) { await page.goto(base + "/", { waitUntil: "load" }); await page.waitForTimeout(800); }
   const events = [];
+  let onScreen;
   cdp.on("Tracing.dataCollected", e => events.push(...e.value));
   const done = new Promise(r => cdp.once("Tracing.tracingComplete", r));
   await cdp.send("Tracing.start", {
@@ -46,8 +48,10 @@ async function one(browser, base) {
   } else {
     await page.goto(base + STORY, { waitUntil: "load" });
     // A client-rendered page (hn-datastar-spa) fetches and renders the
-    // thread after load; server-rendered pages already have it.
-    await page.waitForFunction(() => document.querySelectorAll(".comment").length > 1000 || document.querySelector("#comments > #below"), null, { timeout: 60000 });
+    // thread after load; server-rendered pages already have it. onScreen is
+    // the wall clock from navigation start to the first frame with the
+    // thread on the page, loading included.
+    onScreen = await (await page.waitForFunction(() => (document.querySelectorAll(".comment").length > 1000 || document.querySelector("#comments > #below")) && performance.now(), null, { polling: "raf", timeout: 60000 })).jsonValue();
   }
   await page.waitForTimeout(2500);
   await cdp.send("Tracing.end");
@@ -78,13 +82,14 @@ async function one(browser, base) {
   for (const f of out._frames || []) res[f.b] = (res[f.b] || 0) + (f.dur - f.child) / 1000;
   const tasks = xs.filter(e => e.name === "RunTask");
   res.taskTotal = tasks.reduce((a, e) => a + e.dur, 0) / 1000;
+  if (onScreen != null) res.onScreen = onScreen;
   for (const k in res) res[k] = +res[k].toFixed(0);
   return res;
 }
 
 const servers = [];
 for (const n of NAMES) servers.push(await start(n));
-const browser = await chromium.launch();
+const browser = await launch();
 const runs = Object.fromEntries(NAMES.map(n => [n, []]));
 try {
   for (const n of NAMES) await one(browser, url(n)); // warm-up
@@ -93,7 +98,7 @@ try {
   await browser.close();
   for (const s of servers) await stop(s);
 }
-console.log(`cpu ${RATE}x ${NAV ? "nav" : "cold"}, ${RUNS} runs, median (min-max) ms`);
+console.log(`cpu ${RATE}x ${NAV ? "nav" : "cold"}, ${netLabel()}, ${RUNS} runs, median (min-max) ms`);
 for (const n of NAMES) {
   const keys = [...new Set(runs[n].flatMap(Object.keys))];
   const row = keys.map(k => {

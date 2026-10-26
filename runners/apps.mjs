@@ -3,6 +3,7 @@
 // it answers; the returned child's pid is what the server-CPU runners read
 // (a Go app runs its built binary, so the pid is the server itself).
 import { spawn } from "node:child_process";
+import net from "node:net";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 
@@ -104,7 +105,68 @@ function goApps(variants) {
   );
 }
 
-export const url = name => `http://localhost:${APPS[name].port}`;
+// ---- the network between the browser and the app ----
+// Every browser-driven runner loads its pages through a shaping proxy, so a
+// measurement includes loading what the page needs: the document, its code
+// and styles, data fetches and the update streams. NET=rtt,mbps sets it
+// (default 70 ms round trip, 10 Mbit/s each way, shared by every connection
+// to the app, as one link is); NET=none loads straight from loopback, as the
+// numbers before 2026-10-26 were measured.
+//
+// The proxy is TCP, under HTTP: it holds each chunk for its time on the link
+// and then half the round trip, in both directions, so a patch pushed down an
+// already-open stream pays the latency too. (Chrome's own emulation delays
+// only responses, which skips everything sent down an open stream.)
+export let NET = parseNet(process.env.NET ?? "70,10");
+// A runner that sweeps the round trip itself (dbmon-scroll) sets it here.
+export const setNet = spec => (NET = parseNet(spec));
+function parseNet(spec) {
+  if (spec === "none" || spec === "0") return null;
+  const [rtt, mbps] = spec.split(",").map(Number);
+  return { rttMs: rtt || 0, mbps: mbps || 0 };
+}
+export const netLabel = () => (NET ? `${NET.rttMs} ms RTT, ${NET.mbps || "unlimited"} Mbit/s` : "loopback");
+const PROXY_OFFSET = 1000;
+
+export function shapingProxy(port, target, { rttMs, mbps } = NET ?? {}) {
+  // Read when the proxy starts, so a setNet() before start() applies.
+  const oneWay = (rttMs || 0) / 2;
+  const bytesPerMs = mbps ? (mbps * 1e6) / 8 / 1000 : Infinity;
+  // One queue per direction for the whole link: a chunk leaves once the
+  // chunks before it (on any connection) have.
+  const link = () => {
+    let free = 0;
+    return (len, send) => {
+      const now = performance.now();
+      free = Math.max(now, free) + len / bytesPerMs;
+      setTimeout(send, free + oneWay - now);
+    };
+  };
+  const down = link(), up = link();
+  const sockets = new Set();
+  const server = net.createServer(client => {
+    const upstream = net.connect(target, "localhost");
+    for (const s of [client, upstream]) sockets.add(s), s.on("close", () => sockets.delete(s));
+    const pipe = (from, to, dir) => from.on("data", d => dir(d.length, () => to.writable && to.write(d)));
+    pipe(client, upstream, up);
+    pipe(upstream, client, down);
+    // A side that closes closes the other after the same delay, so bytes
+    // already on their way (an aborted request that was sent) still arrive.
+    const later = (other, dir) => () => dir(0, () => other.destroy());
+    client.on("close", later(upstream, up)).on("error", later(upstream, up));
+    upstream.on("close", later(client, down)).on("error", later(client, down));
+  });
+  // close() also drops the connections still open (live streams).
+  const close = server.close.bind(server);
+  server.close = () => (sockets.forEach(s => s.destroy()), close());
+  return new Promise(r => server.listen(port, () => r(server)));
+}
+
+// Where the browser loads an app from: through the proxy unless NET=none.
+export const url = name => `http://localhost:${APPS[name].port + (NET ? PROXY_OFFSET : 0)}`;
+// The app itself, for the runner's own requests (control endpoints, the
+// stream readers, Lighthouse, which simulates its own network).
+export const direct = name => `http://localhost:${APPS[name].port}`;
 // The page an app is measured on.
 export const page = name => url(name) + (APPS[name].path ?? "/");
 
@@ -124,7 +186,7 @@ export async function start(name, env = {}) {
     try {
       // HEAD on the page is enough to know the server is up; dbmon's live
       // stream is never touched here.
-      await fetch(url(name) + "/", { method: "HEAD" });
+      await fetch(direct(name) + "/", { method: "HEAD" });
       up = true;
     } catch {
       await new Promise(r => setTimeout(r, 100));
@@ -135,6 +197,7 @@ export async function start(name, env = {}) {
     await new Promise(r => setTimeout(r, 50));
     if (child.exitCode !== null) throw new Error(`${name}: port ${app.port} is held by another process`);
     if (app.stream) await checkStream(name, child);
+    if (NET) child.proxy = await shapingProxy(app.port + PROXY_OFFSET, app.port);
     return child;
   }
   child.kill();
@@ -145,7 +208,7 @@ export async function start(name, env = {}) {
 // and a stale one would 404 and pass for a very cheap server.
 async function checkStream(name, child) {
   const ac = new AbortController();
-  const res = await fetch(url(name) + APPS[name].stream, { signal: ac.signal, headers: { "accept-encoding": "br" } });
+  const res = await fetch(direct(name) + APPS[name].stream, { signal: ac.signal, headers: { "accept-encoding": "br" } });
   ac.abort();
   if (res.status !== 200) {
     child.kill();
@@ -154,6 +217,7 @@ async function checkStream(name, child) {
 }
 
 export async function stop(child) {
+  child.proxy?.close();
   child.kill();
   await new Promise(r => (child.exitCode !== null ? r() : child.once("exit", r)));
 }
@@ -165,6 +229,25 @@ export const cpuMs = pid => {
   return (+f[11] + +f[12]) * 10;
 };
 
+// An init script that notes when the live table is first on the page
+// (window.__table, the first animation frame with a row) and first changes
+// after that (window.__live: the update stream connected and applied), in
+// ms from navigation start.
+export function liveTimer() {
+  const frame = () => {
+    if (document.querySelector("td.dbname")) {
+      window.__table = performance.now();
+      new MutationObserver((records, mo) => {
+        if (records.some(r => (r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest("tr"))) {
+          window.__live = performance.now();
+          mo.disconnect();
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+    } else requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 // Chromium for the playwright runners: CHROME_PATH, else playwright's own.
 export const launch = () => chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
 
@@ -173,9 +256,9 @@ export const launch = () => chromium.launch(process.env.CHROME_PATH ? { executab
 // the page with the row the server holds (by id="db…" when rows carry one,
 // else by position). Returns { rows, wrong }.
 export async function checkRows(name, page, settleMs = 3000) {
-  await fetch(url(name) + "/__dbmon/pause");
+  await fetch(direct(name) + "/__dbmon/pause");
   await page.waitForTimeout(settleMs);
-  const want = await (await fetch(url(name) + "/__dbmon/rows")).json();
+  const want = await (await fetch(direct(name) + "/__dbmon/rows")).json();
   const byId = new Map(want.map((r, i) => [r.id, r.text]));
   const shown = await page.evaluate(() =>
     [...document.querySelectorAll("tr")].filter(tr => tr.querySelector("td.dbname")).map(tr => [tr.id, tr.textContent])

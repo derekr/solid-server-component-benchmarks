@@ -1,6 +1,8 @@
 // Lighthouse 12, performance category, default mobile preset (simulated slow
 // 4G, 4x CPU). One fresh headless Chromium per run, and every page in a set
 // runs once per round, so slow stretches of the machine hit all of them.
+// Lighthouse loads each app directly: its simulated network is the network
+// here, so the NET proxy (apps.mjs) would count the latency twice.
 //
 // usage: node lighthouse.mjs <set> [rounds=15] [outDir=results/<set>]
 //   sets: hn (story page, toggles; Solid SC, Solid SPA, Next RSC, Qwik City, Datastar), hn-details (story page, <details>), store (listing + product),
@@ -13,7 +15,7 @@ import fs from "node:fs";
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer-core";
 import { chromium } from "playwright";
-import { APPS, start, stop, url } from "./apps.mjs";
+import { APPS, start, stop, direct } from "./apps.mjs";
 
 const SETS = {
   hn: {
@@ -100,7 +102,7 @@ try {
   for (let round = 1; round <= +roundsArg; round++)
     for (const [page, path] of Object.entries(set.pages))
       for (const app of set.apps) {
-        const r = await once(url(app) + (path ?? APPS[app].path ?? "/"), `${out}/${app}-${page}-${round}.json`);
+        const r = await once(direct(app) + (path ?? APPS[app].path ?? "/"), `${out}/${app}-${page}-${round}.json`);
         const row = { round, app, page, ...r };
         runs.push(row);
         console.log(JSON.stringify(row));

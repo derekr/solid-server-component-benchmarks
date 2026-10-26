@@ -12,9 +12,10 @@
 //   prefetch  the prerender rule taken out, prefetch only
 // The Solid apps route on the client and preload on hover as they do; they
 // run once, as served. Timed from pointerdown until the thread (1,000+
-// comments) is on screen. The
-// proxy passes the stream through uncompressed, which on loopback costs
-// nothing measurable.
+// comments) is on screen. The rewriting proxy sits behind the NET profile's
+// shaping proxy (apps.mjs), and re-compresses the pages it rewrites (brotli
+// 4, flushed per chunk, as the apps stream), so the link carries what the
+// app would send.
 //
 // usage: node prerender.mjs [runs=9] [apps=hn-sc,hn-spa,hn-datastar,hn-datastar-cv,hn-datastar-toggles] [modes=prefetch,moderate,served]
 // needs Xvfb and libXtst (Linux).
@@ -23,7 +24,8 @@ import { spawn, execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { chromium } from "playwright";
-import { start, stop, url } from "./apps.mjs";
+import zlib from "node:zlib";
+import { start, stop, direct as url, NET, shapingProxy, netLabel } from "./apps.mjs";
 
 const RUNS = Number(process.argv[2] || 9);
 const NAMES = (process.argv[3] || "hn-sc,hn-spa,hn-datastar,hn-datastar-cv,hn-datastar-toggles").split(",");
@@ -95,29 +97,37 @@ const proxy = http
       req.on("data", c => (body += c)).on("end", () => (res.end(), waiting?.(JSON.parse(body))));
       return;
     }
-    const headers = { ...req.headers, "accept-encoding": "identity", host: new URL(target).host };
+    const headers = { ...req.headers, host: new URL(target).host };
     const up = http.request(target + req.url, { method: req.method, headers }, upRes => {
       const html = /text\/html/.test(upRes.headers["content-type"] || "");
       const h = { ...upRes.headers };
       if (html) delete h["content-length"];
       res.writeHead(upRes.statusCode, h);
       if (!html) return upRes.pipe(res);
+      // Decode, rewrite the head, and encode again as it came.
+      const br = upRes.headers["content-encoding"] === "br";
+      const src = br ? upRes.pipe(zlib.createBrotliDecompress()) : upRes;
+      const enc = br ? zlib.createBrotliCompress({ params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } }) : null;
+      if (enc) enc.pipe(res);
+      const out = enc ?? res;
+      const write = c => (out.write(c), enc?.flush());
       // Stream it through; the head is in the first chunks.
       let head = "";
-      upRes.setEncoding("utf8");
-      upRes.on("data", c => {
-        if (head === null) return res.write(c);
+      src.setEncoding("utf8");
+      src.on("data", c => {
+        if (head === null) return write(c);
         head += c;
         const i = head.indexOf("</head>");
         if (i < 0) return;
-        res.write(rewrite(head.slice(0, i), mode) + TIMING + head.slice(i));
+        write(rewrite(head.slice(0, i), mode) + TIMING + head.slice(i));
         head = null;
       });
-      upRes.on("end", () => res.end(head ?? ""));
+      src.on("end", () => out.end(head ?? ""));
     });
     req.pipe(up);
   })
-  .listen(PROXY);
+  .listen(NET ? PROXY + 1 : PROXY);
+const shaper = NET ? await shapingProxy(PROXY, PROXY + 1) : null;
 
 const next = ms => Promise.race([new Promise(r => (waiting = r)), sleep(ms).then(() => ({ timeout: true }))]);
 const xvfb = spawn("Xvfb", [DISPLAY, "-screen", "0", "1280x900x24"], { stdio: "ignore" });
@@ -165,9 +175,10 @@ try {
   }
 } finally {
   proxy.close();
+  shaper?.close();
   xvfb.kill();
 }
 const med = xs => [...xs].sort((a, b) => a - b)[xs.length >> 1];
-console.log(`navigation to the story without DevTools, cpu 1x, ${RUNS} runs, medians, cache on, ${HOVER_MS} ms hover and an 80 ms press`);
+console.log(`navigation to the story without DevTools, cpu 1x, ${netLabel()}, ${RUNS} runs, medians, cache on, ${HOVER_MS} ms hover and an 80 ms press`);
 for (const [k, rs] of Object.entries(runs))
   console.log(k.padEnd(28), `on screen ${med(rs.map(r => r.ms ?? Infinity))} ms, prerendered ${rs.filter(r => r.prerendered).length}/${rs.length}, runs: ${rs.map(r => r.ms ?? "timeout").join(" ")}`);
