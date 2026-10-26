@@ -43,14 +43,14 @@ Everything uses published packages: `next` 16.4.2 and `react` 19.3.1 for the Nex
 | `apps/dbmon-go` | The Datastar table again in Go, on the Datastar Go SDK: the same page, events and styles (`dbmon-go-rows` is the twin of `dbmon-hypermedia-rows`, and so on), with the SDK's pure-Go brotli or Google's C brotli (`-cbrotli`). | 3031–3049 |
 
 Notes on fairness:
-- **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed and user pages call the live HN API. The store's catalog is in memory with no delay, on both sides.
+- **Same data, same latency.** The HN apps serve one cached story (30186326, about 1,500 comments) after a fixed `HN_DELAY_MS=150` delay, so neither side gets instant data. The feed pages serve a fixed snapshot of four pages of each feed after the same delay (`HN_FEED=snapshot`, the default in the runners; `HN_FEED=live` calls the live HN API), and the user pages call the live API. The store's catalog is in memory with no delay, on both sides.
 - **Same simulation.** Both DBMon apps run the same `databases` module (rows, change rate and tick rate set by `DBMON_ROWS`, `DBMON_MUTATIONS`, `DBMON_FPS`), and both compress each connection with brotli quality 4 and a 4 MB window, a common streaming setting (`DBMON_BROTLI=quality,window` overrides it for both).
 - **Same language, except where it's the point.** The DBMon servers are Node, except `apps/dbmon-go`, which "Why your backend matters" below compares on purpose.
 - **Same first-load compression.** The Datastar page and `datastar.js` are brotli-compressed, as the Solid server compresses its document and assets. They used to go out uncompressed (about 348 kB of page and 33 kB of script at 400 rows, instead of 15 kB and 13 kB). None of the live-table runners below measure first load, so this changes none of their numbers.
 
 ## Rerunning the article's numbers
 
-`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-23, on rc.18, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against an SPA and two styles of the Datastar port, which the article's first draft did not. rc.18 shares a `broadcast()` data source across viewers (solidjs/solid#4230), which the SPA's server column depends on, and sends a live table's changed rows as in-place edits instead of row markup (solidjs/solid#4239). Client runs use 4x CPU throttling, Lighthouse's mobile default.
+`runners/all.sh` reruns everything below (about an hour) and writes to `results/`. The "rerun" column is from that script on 2026-10-23, on rc.18, in a 4-core Linux cloud container. The "article" column is what the article quotes, measured during development (2026-10-14 to 10-21) on unreleased builds and sometimes a slower machine. The two disagree in size but not in direction. The live-table results are new: they compare against an SPA and two styles of the Datastar port, which the article's first draft did not. rc.18 shares a `broadcast()` data source across viewers (solidjs/solid#4230), which the SPA's server column depends on, and sends a live table's changed rows as in-place edits instead of row markup (solidjs/solid#4239). Client runs use 4x CPU throttling, Lighthouse's mobile default. Since 2026-10-26 every browser runner loads its pages through a shaped network, so the times include loading; see "Measuring with loading included" below. The tables in this section and the explorations were measured on loopback before that, on other days, so compare them with each other and not with that section's.
 
 ### Bundle size: the fixed cost
 
@@ -527,6 +527,73 @@ At 2,000 rows the two trade places: Datastar handles the median click sooner (0.
 **The runner's check changed for this run.** `dbmon-client.mjs` used to call a page "frozen" when a trivial `page.evaluate` took 5 s or more. On the Datastar SPA at 2,000 rows that call waited 8–30 s while clicks were handled in under 2 s, so the check is now a click, and the runner reports click latency. The live-table tables earlier in this README were measured with the old check.
 
 Rocket is in beta, so its idioms may still change, and these ports will follow them. They are written as a reference for people learning Datastar.
+
+## Measuring with loading included
+
+Measured 2026-10-26 in a 4-core Linux cloud container, slower and noisier than the machine above (Lighthouse's TBT went up for every app, the unchanged ones too), so compare these numbers with each other, not with the earlier tables.
+
+Until this run the browser runners loaded every page over loopback, so a page's own requests (its scripts, the data an SPA fetches, the code a page imports late) cost almost nothing, and pushing a patch down an open stream cost nothing either. Three things changed:
+
+- **A shaped network for every browser runner.** `runners/apps.mjs` puts a small TCP proxy in front of each app (on its port + 10000) that holds every chunk for half the round trip each way and queues each direction behind a shared bandwidth limit. The default profile is 70 ms RTT and 10 Mbit/s; `NET=rtt,mbps` sets another and `NET=none` goes back to loopback. Unlike Chrome's network emulation, the proxy also delays what is pushed down an open SSE stream, which is what the live tables and Datastar's windows depend on. `lighthouse.mjs` still talks to the app directly, because Lighthouse simulates its own network; `store-add.mjs` keeps its own emulated round trip. `dbmon-client.mjs` and `dbmon-load.mjs` stay steady-state runners and report the load beside it (`loadMs`, `net`).
+- **Every app preloads what it loads late.** The Solid servers send a `Link: rel=modulepreload` header for the framework chunks a page imports only once its entry has run (`regions` on hn-sc-toggles' pages, `wire` and `decode` on DBMon), looked up by name in the Vite manifest. The Datastar SPAs `modulepreload` `datastar-rocket.js`. Next and Qwik already did this as shipped and are unchanged.
+- **Every feed prefetches its next page.** The Solid HN apps preload the Next Page link's code and data eagerly (`eagerPreload({ data: true })` and `preload="eager"`); the Datastar MPA adds an `immediate` speculation rule for that link; the Datastar SPA preloads the next page's JSON after each render. Next and Qwik prefetch links in view as shipped.
+
+### Did the preloads help?
+
+`results/preload-ab/` loads the same pages with the preloads taken out and put back, alternating, twice (`runners/` scripts as above; the job is in that folder). 4x CPU, 70 ms RTT, 10 Mbit/s, medians in ms:
+
+| | Preloads off | Preloads on |
+| --- | ---: | ---: |
+| hn-sc-toggles story, thread on screen | 2,209 / 2,319 | 2,231 / 2,428 |
+| hn-datastar-spa story, thread on screen | 1,323 / 1,384 | 1,371 / 1,302 |
+| DBMon Solid, table / live | 295 / 468 | 328 / 493 |
+| DBMon Solid SPA, table / live | 1,014 / 1,323 | 924 / 1,233 |
+| DBMon Solid SPA window, table / live | 841 / 942 | 820 / 949 |
+| DBMon Solid SC window, table / live | 253 / 834 | 270 / 856 |
+| DBMon Datastar SPA, table / live | 1,144 / 1,167 | 1,095 / 1,126 |
+
+Mostly no. The only change bigger than the noise is the Solid SPA, about one round trip sooner, because `decode` used to wait for the entry. On the other pages the late chunk is small and arrives while the page is still waiting on its document or its data, so loading it earlier moves nothing on screen. The preloads stay because they cost nothing and they do show on client navigation: hn-sc's navigation to the story used to load 3.9 kB of code after the click and now loads none, since the feed already preloaded it.
+
+### The HN pages
+
+`script-time.mjs` now reports `onScreen`, the wall clock from navigation start until the thread is on the page. 4x CPU, cold cache, 7 runs, medians (`results/hn-script-time.txt`):
+
+| | hn-sc | hn-spa | hn-datastar | hn-datastar-cv | hn-sc-toggles | hn-spa-toggles | hn-datastar-toggles | hn-datastar-window |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Thread on screen, ms | 2,389 | 3,323 | 2,662 | 1,289 | 2,540 | 3,032 | 2,425 | 470 |
+| Main-thread tasks, ms | 2,246 | 3,119 | 2,502 | 1,110 | 2,925 | 2,853 | 2,250 | 337 |
+
+Client navigation from the feed to the story, 1x CPU, cache off (`results/hn-navigation.txt`): hn-sc 543 ms, hn-spa 612, hn-sc-toggles 804, hn-spa-toggles 584, Qwik 1,421, hn-datastar 619, with `content-visibility` 388, toggles 538, window 254. On loopback the Solid apps took 240–480 ms; the round trips and the 190–250 kB of thread data at 10 Mbit/s add about 300 ms to each. The toggles page still navigates slowest of the Solid four: it moves 50 kB more than the SPA and renders 652 slots.
+
+Lighthouse (15 rounds, `results/lighthouse-*.txt`) keeps the same order as before: on the toggles story hn-sc-toggles 90, Datastar toggles 85, SPA 75, Qwik 74, Next 66, Datastar window 100; on the `<details>` story hn-sc 94, Datastar 86, SPA 77, Datastar with `content-visibility` 97; every store page 99–100.
+
+### The live table
+
+At 400 rows, one viewer (`results/dbmon/load.jsonl`, `results/dbmon-client.jsonl`), the server-rendered tables are on screen in 175–325 ms and the SPA in about 950 ms, because it fetches its rows after its script. Steady-state client time went up for every app on this machine (Solid 819 ms/s, SPA 878, Datastar changed rows 956), but the order is unchanged.
+
+The windows at 10,000 rows (`results/dbmon/window-load.jsonl`): the SPA window shows its table after 2.9 s, behind 1.3 MB of rows at 10 Mbit/s; the SC window after 291 ms and the Datastar windows after 125–147 ms.
+
+### GET windows: fetched and preloaded slices against slices pushed down the stream
+
+The Datastar window sends a scroll as a POST and gets its slice pushed down the open stream, so every slice shares the stream's brotli context. `DBMON_WINDOW_FETCH=get` (`dbmon-hypermedia-window-get`, port 3050; `dbmon-go-window-get`, 3051) tries the other way: the page fetches its slice with a GET, and each slice carries `<link rel=preload as=fetch>` tags for the next two cells in the direction of the scroll, so the browser is fetching the next slice before the scroll reaches it. Slices are cut on the same 20-row grid as the SC window, with 20 rows of overscan, and each one is compressed on its own. The stream only carries the live updates for the cell the page reports with a POST after each slice lands, starting from the tick the slice was rendered at so nothing is missed.
+
+2,000 rows, 3 rounds, medians (`results/dbmon/window-scroll.jsonl`). Each cell is covered %, jump median ms, and kB on the wire during the fling / the ten jumps:
+
+| 4x CPU | Solid SPA window | Solid SC window | Datastar window | Datastar, overscan 20 | Datastar, overscan 40 | Datastar, delta | Datastar GET, preloaded |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 70 ms RTT | 92%, 36 ms, 290 / 416 kB | 84%, 191 ms, 47 / 44 kB | 39%, 146 ms, 18 / 19 kB | 80%, 210 ms, 21 / 37 kB | 100%, 281 ms, 26 / 56 kB | 100%, 272 ms, 22 / 56 kB | 76%, 241 ms, 62 / 149 kB |
+| 150 ms RTT | 90%, 37 ms, 288 / 403 kB | 43%, 277 ms, 28 / 45 kB | 29%, 232 ms, 19 / 20 kB | 60%, 286 ms, 21 / 38 kB | 97%, 340 ms, 24 / 57 kB | 100%, 359 ms, 21 / 57 kB | 97%, 304 ms, 60 / 145 kB |
+
+At 1x CPU every app covers the whole fling at both latencies; jumps take 8–9 ms on the SPA window and 96–117 ms (70 ms RTT) or 174–201 ms (150 ms) on the server-rendered ones, the GET window among them.
+
+What it shows:
+
+- **Preloading does what it promises at a long round trip.** At 150 ms the GET window keeps up with a fling (97%) where the stream window with the same 20 rows of overscan doesn't (60%), and it matches the 40-row overscan's coverage with jumps 35 ms sooner.
+- **It costs two to three times the bytes.** Each slice is compressed on its own, so it can't refer back to the rows the stream already sent, and the preloads fetch slices that a jump never shows. The fling moved 60 kB against 21 kB for the stream with the same overscan, and the jumps 145 kB against 38 kB.
+- **It doesn't help on a throttled CPU at 70 ms.** There the GET window covered 76% of the fling, against 80% for the same overscan on the stream and 100% for 40 rows, and on loopback at 4x it covered 78% where every stream window covers 94–100%. Each slice is a fetch, a morph and a POST, and the page paints fewer frames while it works through them.
+- **So the stream's brotli savings win** at the latencies most people have, and a larger overscan on the stream buys the same coverage for fewer bytes. The GET window is worth it where round trips are long and bytes are cheap, or where slices can be cached and shared, which the stream can't do.
+
+The HN thread's window (`TOGGLES=window`) wasn't turned into GETs: its patches depend on the rows the page already has, so the next one can't be fetched ahead without a different design, and no runner scrolls it yet.
 
 ## How to read the numbers
 

@@ -1,0 +1,3 @@
+cpu 4x cold, 70 ms RTT, 10 Mbit/s, 5 runs, median (min-max) ms
+hn-sc-toggles    script 832 (775-903), parseHTML 112 (100-178), compile 33 (25-50), style 118 (109-207), layout 1041 (1017-1049), paint 54 (40-67), gc 28 (24-32), taskTotal 2687 (2577-2862), onScreen 2319 (2219-2483)
+hn-datastar-spa  script 739 (652-849), parseHTML 150 (125-231), style 187 (180-253), layout 1082 (1003-1195), paint 41 (32-48), compile 0 (0-1), gc 37 (30-54), taskTotal 2605 (2339-2888), onScreen 1384 (1285-1611)
