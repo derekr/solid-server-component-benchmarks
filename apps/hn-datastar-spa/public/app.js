@@ -107,6 +107,16 @@ rocket("hn-app", {
   mode: "light",
   setup({ render, cleanup }) {
     let current = 0;
+    // A <link rel="preload"> for a page's JSON, once per URL: the next fetch
+    // of it is served from the preload. (rel="prefetch" goes to the HTTP
+    // cache, which the uncacheable JSON doesn't stay in, so the click fetched
+    // it again.)
+    const prefetched = new Set();
+    const hint = url => {
+      if (prefetched.has(url)) return;
+      prefetched.add(url);
+      document.head.append(Object.assign(document.createElement("link"), { rel: "preload", as: "fetch", href: url, crossOrigin: "" }));
+    };
     async function load() {
       const route = dataUrl(location);
       if (!route) return render({}, { kind: "missing" });
@@ -115,6 +125,10 @@ rocket("hn-app", {
       if (n !== current) return;
       render({}, { ...route, data });
       if (route.kind === "story") scrollTo(0, 0);
+      // A feed page patches in the hint for the page after it, so "more >"
+      // reads its JSON from the preload.
+      const next = route.kind === "stories" && document.querySelector('a[aria-label="Next Page"]');
+      if (next) hint(dataUrl(next).url);
     }
     const onClick = e => {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -126,18 +140,13 @@ rocket("hn-app", {
     };
     // The next page's data, fetched on intent with the platform's hint, as the
     // multi-page port prerenders from speculation rules: as soon as the
-    // pointer is over a link to one of the app's pages, a <link rel="preload">
-    // fetches that page's JSON, and the click's fetch is served from it, as
-    // the shell's preload is on first load. (rel="prefetch" goes to the HTTP
-    // cache, which the uncacheable JSON doesn't stay in, so the click fetched
-    // it again.)
-    const prefetched = new Set();
+    // pointer is over a link to one of the app's pages, a preload fetches
+    // that page's JSON, and the click's fetch is served from it, as the
+    // shell's preload is on first load.
     const onOver = e => {
       const a = e.target.closest?.("a[href]");
       const route = a && !a.target && a.origin === location.origin && dataUrl(a);
-      if (!route || prefetched.has(route.url)) return;
-      prefetched.add(route.url);
-      document.head.append(Object.assign(document.createElement("link"), { rel: "preload", as: "fetch", href: route.url, crossOrigin: "" }));
+      if (route) hint(route.url);
     };
     document.addEventListener("click", onClick);
     document.addEventListener("pointerover", onOver);

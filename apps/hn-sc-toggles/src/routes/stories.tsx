@@ -41,7 +41,7 @@ const getStories = GET(async ({ params, search }: Args) => {
           )}
           <span>page {page}</span>
           {stories.length >= 29 ? (
-            <a class="page-link" href={`/${type}?page=${page + 1}`} aria-label="Next Page">
+            <a class="page-link" href={`/${type}?page=${page + 1}`} aria-label="Next Page" preload="eager">
               more {">"}
             </a>
           ) : (

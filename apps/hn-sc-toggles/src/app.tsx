@@ -9,7 +9,7 @@
 // Note there is no server-component API in this file. A `"use server"` call
 // mounts as a route (`serverRouteComponent`) or through `dynamicComponent()`;
 // the transport install lives in the generated entry.
-import { createRouter, defineRoute, intentPreload } from "@solidjs/router";
+import { createRouter, defineRoute, eagerPreload, intentPreload } from "@solidjs/router";
 import { Loading } from "solid-js";
 import { dynamicComponent } from "@solidjs/web";
 import Stories, { searchSchema } from "~/routes/stories";
@@ -54,9 +54,11 @@ async function getNav() {
 // router makes its call from the match — params, and the feeds' `page`
 // through `searchSchema` — on navigation and on link hover alike.
 // `intentPreload` is that hover (and focus, and touch); link preloading is
-// opt-in as of router 2.0.0-next.38.
+// opt-in as of router 2.0.0-next.38. `eagerPreload` makes the same call for
+// the links marked `preload="eager"` as soon as the page is idle: the feed's
+// "more >", so its next page is in the HTTP cache before anyone asks.
 const Router = createRouter({
-  preloadLinks: intentPreload(),
+  preloadLinks: [intentPreload(), eagerPreload({ data: true })],
   routes: [
     defineRoute({
       path: "/:type?",

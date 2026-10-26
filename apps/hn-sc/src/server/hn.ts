@@ -49,7 +49,7 @@ export async function getStories(type: StoryTypes, page: number): Promise<StoryD
   if (process.env.HN_FEED === "snapshot") {
     const delay = Number(process.env.HN_DELAY_MS || 0);
     if (delay) await new Promise(r => setTimeout(r, delay));
-    return ((feedsSnapshot as Record<string, StoryDefinition[]>)[`${storyType}?page=${page}`] ?? []);
+    return ((feedsSnapshot as unknown as Record<string, StoryDefinition[]>)[`${storyType}?page=${page}`] ?? []);
   }
   return fetchAPI(`${storyType}?page=${page}`);
 }

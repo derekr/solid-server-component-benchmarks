@@ -118,7 +118,9 @@ const esc = s =>
 // app does it: speculation rules (in the head) prerender a header or feed
 // link as soon as the pointer rests on it (eager), and prefetch it after
 // about 200 ms of hover (moderate). A moderate prerender starts too late to
-// finish the thread before the click (runners/prerender.mjs). The header's
+// finish the thread before the click (runners/prerender.mjs). A feed's next
+// page ("more >") is prefetched as soon as the page loads (immediate), so
+// paging forward is served from the prefetch. The header's
 // links, a nav bar, go on pointerdown instead of waiting for the click.
 const NAV_ON_DOWN = ` data-on:pointerdown="const a = evt.target.closest('a'); if (a && a.origin === location.origin && evt.button === 0 && !(evt.metaKey || evt.ctrlKey || evt.shiftKey || evt.altKey)) location.href = a.href"`;
 
@@ -136,7 +138,7 @@ const head = title => `<!doctype html>
 <title>${esc(title)}</title>
 <link rel="stylesheet" href="/app.css">
 ${CV ? "<style>.item-view-comments > .comment-children > .comment { content-visibility: auto; contain-intrinsic-size: auto 400px; }</style>\n" : ""}<script type="module" src="/datastar.js"></script>
-<script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "moderate"}], "prerender": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "eager"}]}</script>
+<script type="speculationrules">{"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "moderate"}, {"where": {"selector_matches": ".news-list-nav a[aria-label='Next Page']"}, "eagerness": "immediate"}], "prerender": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".header a, .news-list a"}]}, "eagerness": "eager"}]}</script>
 </head>
 <body>`;
 

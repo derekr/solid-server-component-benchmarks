@@ -4,7 +4,7 @@
 // (../hn-sc) renders the same routes with the same markup — only the
 // static parts come back as server components there, so they arrive as HTML
 // once and never as data.
-import { createRouter, defineRoute, intentPreload } from "@solidjs/router";
+import { createRouter, defineRoute, eagerPreload, intentPreload } from "@solidjs/router";
 import { Loading } from "solid-js";
 import Nav from "~/components/nav";
 import Stories, { preload as preloadStories } from "~/routes/stories";
@@ -19,9 +19,12 @@ import "./app.css";
 // so the `:id` routes read `params.id` as `string` rather than
 // `string | undefined`.
 // `intentPreload` is the hover, focus, and touch preload. Link preloading is
-// opt-in as of router 2.0.0-next.38.
+// opt-in as of router 2.0.0-next.38. `eagerPreload` preloads the links marked
+// `preload="eager"` (the feed's "more >") as soon as the page is idle: the
+// next page's code and its data (which the router keeps for 5 s, as for a
+// hover).
 const Router = createRouter({
-  preloadLinks: intentPreload(),
+  preloadLinks: [intentPreload(), eagerPreload({ data: true })],
   routes: [
     defineRoute({
       path: "/:type?",

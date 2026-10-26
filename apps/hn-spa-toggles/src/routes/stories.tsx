@@ -56,7 +56,7 @@ export default function Stories(props: RouteProps<Path>) {
             </span>
           }
         >
-          <a class="page-link" href={`/${type()}?page=${page() + 1}`} aria-label="Next Page">
+          <a class="page-link" href={`/${type()}?page=${page() + 1}`} aria-label="Next Page" preload="eager">
             more {">"}
           </a>
         </Show>
